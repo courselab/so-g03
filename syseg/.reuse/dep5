@@ -1,0 +1,5 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: syseg
+Upstream-Contact: Luiz Antonio de Abreu Pereira <lap.junior@gmail.com>
+Source: https://github.com/courselab/so-g03.git
+
