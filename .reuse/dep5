@@ -1,0 +1,5 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: so-g03
+Upstream-Contact: Tiago Oliva <tiago.oliva.costa@gmail.com>
+Source: https://github.com/courselab/so-g03.git
+
