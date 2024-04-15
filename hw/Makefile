@@ -34,8 +34,9 @@ clean:
 
 # Create stand-alone distribution
 
-EXPORT_FILES = Makefile README
+EXPORT_FILES = README Makefile
 EXPORT_NEW_FILES = NOTEBOOK
+
 
 ## Bintools: convenience rules for inspecting binary files
 ##
@@ -322,6 +323,7 @@ stick: $(IMG)
 .PHONY: clean clean-extra intel att 16 32 diss /diss /i16 /i32 /a16 /a32
 
 
+
 # End of Bintools.
 # -------------------------------------------------------------
 
@@ -343,7 +345,7 @@ stick: $(IMG)
 ##
 ## A pack distribution contain all the items necessary to build and run the
 ## relevant piece of software. It's useful,a for instance, to bundle
-## self-contained subsections of SYSeg meant to be delivered as
+## self-contained subsections of DOCM4_PROJECT meant to be delivered as
 ## programming exercise assignments or illustrative source code examples.
 ##		
 ## In order to select which files should be included in the bundle, list them
@@ -355,13 +357,11 @@ stick: $(IMG)
 
 TARNAME=hw
 
-
-
 syseg-export export:
 	@if ! test -f .dist; then\
 	  make do_export;\
 	 else\
-	  echo "This is a distribution pack already. Nothing to be done.";\
+	  echo "This is an exported bundle already. Nothing to be done.";\
 	fi
 
 do_export:
@@ -374,8 +374,10 @@ do_export:
 	for i in $(EXPORT_NEW_FILES); do\
 	  ../../tools/syseg-newfile -c $(TARNAME)/$$i;\
 	done
-	touch $(TARNAME)/.dist
+	make $(TARNAME)/Makefile
+	echo "DOCM4_DIST=yes" > $(TARNAME)/.dist
 	tar zcvf $(TARNAME).tar.gz $(TARNAME)
+
 
 clean-export:
 	rm -f $(TARNAME).tar.gz
@@ -389,7 +391,12 @@ clean-export:
 #
 # These rules are not relevant for the source-code examples in this directory.
 # The are provided to automatically update docm4 files when their respective
-# sources change.
+# sources change. It won't have effect in an exported directory, though.
+
+-include .dist
+
+ifneq (yes,$(DOCM4_DIST))
+
 
 docm4_deps = ../../tools/docm4.m4 ../../tools/bintools.m4
 
@@ -408,6 +415,8 @@ $(docm4_supported_files): % : %.m4 $(docm4_deps)
 updatem4: Makefile
 #	@path=$$(pwd) ; dir=$${path##*/}; make -C .. $$(for i in $(docm4_supported_files); do test -f $$dir/$$i.m4 && echo "$$dir/$$i" ; done)
 	@make $(docm4_supported_files)
+
+endif
 
 # End of update docm4 files.
 
