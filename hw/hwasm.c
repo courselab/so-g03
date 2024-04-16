@@ -14,6 +14,30 @@
 
 #define MAX_LINE_LENGTH 100 /* assuming lines are less than 100 characters long */
 
+/* Define a structure to hold instruction mappings */
+typedef struct {
+        char *instruction;
+        char *machine_code;
+} InstructionMapping;
+
+/* Define a structure to hold argument mappings */
+typedef struct {
+        char *argument;
+        char *machine_code;
+} ArgumentMapping;
+
+/* Define instruction mappings */
+InstructionMapping opcodes[] = {
+    {"mov%ah", "b4"},
+    {"mov%ebx", "bb"},
+};
+
+/* Define register mappings */
+ArgumentMapping arguments[] = {
+    {"$0xe", "0e"},
+    {"$0x878a0000", "00008a87"},
+};
+
 char *trim_comment(char *str)
 {
         int i, j;
@@ -52,6 +76,52 @@ char *trim_tabs(char *str)
         return str;
 }
 
+char *extract_instruction(char *str)
+{
+        char *instruction = strstr(str, "mov");
+        if (instruction == NULL)
+                return NULL;
+
+        char *comma = strchr(instruction, ',');
+        printf("%s\n", comma);
+        if (comma == NULL) {
+                return NULL;
+        } else {
+                strcat(instruction, comma);
+        }
+
+        *comma = '\0'; /* Replace comma with null terminator to separate the instruction*/
+
+        printf("%s", instruction);
+        return instruction;
+}
+
+/* Identify opcodes and replace them by corresponding values &*/
+const char *pattern_match(const char *str)
+{
+
+        const char *beggining = str;
+        /* mov instruction */
+        char *instruction = strstr(str, "mov ");
+        if (instruction == NULL) {
+                return beggining;
+        } else {
+                char *reg = strchr(instruction, '%');
+                if (reg == NULL) {
+                        return beggining;
+                } else {
+                        strcat(instruction+3, reg);
+                }
+                /* get register */
+                *reg = '\0';
+                puts(instruction);
+        }
+#if 0
+        extract_instruction(str);
+#endif
+        return instruction;
+}
+
 void parse_file(const char *filename)
 {
         FILE *file = fopen(filename, "r");
@@ -64,6 +134,7 @@ void parse_file(const char *filename)
         while (fgets(line, MAX_LINE_LENGTH, file) != NULL) {
                 trim_tabs(line);
                 trim_comment(line);
+                pattern_match(line);
                 printf("%s", line);
         }
 
