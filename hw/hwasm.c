@@ -68,6 +68,20 @@ void parse_file(const char *filename) {
   fclose(file);
 }
 
+#if 0
+/* Mapping OpCodes */
+mov_ah = "b4"; /* 00 */
+mov_ebx = "bb"; /* 00 */
+jmp = "eb";
+hlt = "f4";
+add_eax = "04";
+
+
+/*Mapping Arguments */
+"e" = "0e";
+"878a0000" = "00_00_8a_87";
+#endif
+
 int main() {
   parse_file("hw.S");
   return 0;
