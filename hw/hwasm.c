@@ -29,6 +29,7 @@ typedef struct {
 /* Define instruction mappings */
 InstructionMapping opcodes[] = {
     {"mov%ah", "b4"},
+    {"mov%al", "b4"},
     {"mov%ebx", "bb"},
 };
 
@@ -37,6 +38,35 @@ ArgumentMapping arguments[] = {
     {"$0xe", "0e"},
     {"$0x878a0000", "00008a87"},
 };
+
+
+/*Function to get opcode for a given instruction*/ 
+ char *get_opcode(const char *instruction) {
+    /*Iterate through the lookup table*/ 
+    for (int i = 0; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
+        /*Compare the instruction*/ 
+        if (strcmp(instruction, opcodes[i].instruction) == 0) {
+            /*Return the corresponding opcode*/ 
+            return opcodes[i].machine_code;
+        }
+    }
+    /*If instruction not found, return NULL*/ 
+    return NULL;
+}
+
+/*Function to get opcode for a given instruction*/ 
+ char *get_argument(const char *argument) {
+    /*Iterate through the lookup table*/ 
+    for (int i = 0; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
+        /*Compare the instruction*/ 
+        if (strcmp(argument, arguments[i].argument) == 0) {
+            /*Return the corresponding opcode*/ 
+            return arguments[i].machine_code;
+        }
+    }
+    /*If instruction not found, return NULL*/ 
+    return NULL;
+}
 
 char *trim_comment(char *str)
 {
@@ -78,7 +108,7 @@ char *trim_tabs(char *str)
 
 char *extract_instruction(char *str)
 {
-        char *instruction = strstr(str, "mov");
+        char *instruction = strtok(str, " ");
         if (instruction == NULL)
                 return NULL;
 
@@ -96,30 +126,30 @@ char *extract_instruction(char *str)
         return instruction;
 }
 
-/* Identify opcodes and replace them by corresponding values &*/
-const char *pattern_match(const char *str)
+/* Identify opcodes and replace them by corresponding values*/
+const char *pattern_match(char *str)
 {
-
         const char *beggining = str;
-        /* mov instruction */
-        char *instruction = strstr(str, "mov ");
+
+        char *instruction = strtok(strdup(str), " ");
         if (instruction == NULL) {
                 return beggining;
-        } else {
-                char *reg = strchr(instruction, '%');
-                if (reg == NULL) {
-                        return beggining;
-                } else {
-                        strcat(instruction+3, reg);
-                }
-                /* get register */
-                *reg = '\0';
-                puts(instruction);
+        } else if(strcmp(instruction, "mov") == 0){
+                /* mov instruction*/
+                char *argument = strdup(strtok(NULL, ","));
+                char *reg = strtok(NULL, " ");
+                strcat(instruction, reg);
+
+                char opcode[255];
+                strcpy(opcode, get_opcode(instruction));
+                char * argument_code = get_argument(argument);
+                strcat(opcode, argument_code);
+                return opcode;
         }
 #if 0
         extract_instruction(str);
 #endif
-        return instruction;
+        return str;
 }
 
 void parse_file(const char *filename)
@@ -131,29 +161,21 @@ void parse_file(const char *filename)
         }
 
         char line[MAX_LINE_LENGTH];
+
         while (fgets(line, MAX_LINE_LENGTH, file) != NULL) {
                 trim_tabs(line);
                 trim_comment(line);
-                pattern_match(line);
+                pattern_match(line); /*TODO trim newline character*/
                 printf("%s", line);
         }
 
+  #if 0
+        char * test = "mov $0xe, %ah";
+        test = pattern_match(test);
+        printf("%s", test);
+#endif
         fclose(file);
 }
-
-#if 0
-/* Mapping OpCodes */
-mov_ah = "b4"; /* 00 */
-mov_ebx = "bb"; /* 00 */
-jmp = "eb";
-hlt = "f4";
-add_eax = "04";
-
-
-/*Mapping Arguments */
-"e" = "0e";
-"878a0000" = "00_00_8a_87";
-#endif
 
 int main()
 {
