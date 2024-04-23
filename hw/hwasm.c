@@ -18,31 +18,33 @@
 /* Define a structure to hold instruction mappings */
 typedef struct {
         char *instruction;
-        char *machine_code;
+        unsigned char machine_code;
 } InstructionMapping;
 
 /* Define a structure to hold argument mappings */
 typedef struct {
         char *argument;
-        char *machine_code;
+        unsigned char machine_code;
 } ArgumentMapping;
 
 /* Define instruction mappings */
 InstructionMapping opcodes[] = {
-    {"mov%ah", "b4"}, {"mov%al", "b4"}, {"mov%bx", "bb"}, {"cmp", ""},
-    {"je", ""},       {"int", ""},      {"add", ""},      {"jmp", ""},
-    {"hlt", ""},      {".string", ""},  {".fill", ""},    {".word", ""},
+    {"mov%ah", 0xb4}, {"mov%al", 0x8a}, {"mov%bx", 0xbb}, {"cmp%al", 0x3c},
+    {"add%bx", 0x83c3},
+    {"je", 0x74}, {"int", 0xcd}, {"jmp", 0xeb},
+    {"halt:", 0x14},
+    {"hlt", 0xf4},      {".string", 0x0},  {".fill", 0x0},    {".word", 0x0},
 };
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", "0e"},  {"$0x0", "00008a87"}, {"$0x878a0000", "00008a87"}, {"halt", "00"},
-    {"$0x10", "10"}, {"$0x1", "1"},        {"0xaa55", "55aa"},          {"msg(%bx)", ""},
+    {"$0xe", 0xe},   {"$0x0", 0x0}, 
+    {"$0x10", 0x10}, {"0xaa55", 0x55aa}, {"msg(%bx)", 0x177c},
 
 };
 
 /*Function to get opcode for a given instruction*/
-char *get_opcode(const char *instruction)
+unsigned char get_opcode(const char *instruction)
 {
         int i;
         /*Iterate through the lookup table*/
@@ -58,7 +60,7 @@ char *get_opcode(const char *instruction)
 }
 
 /*Function to get opcode for a given instruction*/
-char *get_argument(const char *argument)
+unsigned char get_argument(const char *argument)
 {
         int i;
         /*Iterate through the lookup table*/
@@ -136,11 +138,10 @@ const char *pattern_match(char *str)
                 char *reg = strtok(NULL, " ");
                 strcat(instruction, reg);
 
-                char opcode[255];
-                strcpy(opcode, get_opcode(instruction));
-                char *argument_code = get_argument(argument);
-                strcat(opcode, argument_code);
-                strcpy(str, opcode);
+                unsigned char opcode = get_opcode(instruction);
+                unsigned char argument_code = get_argument(argument);
+                unsigned int instruction = (opcode << 8) | argument_code;
+                sprintf(str, "%x", instruction);
         } else if (strcmp(instruction, "cmp") == 0) {
                 /* cmp instruction */
                 /* Loop while char is not 0x0 */
@@ -167,9 +168,9 @@ void parse_file(const char *filename)
                 trim_line(line);
                 pattern_match(line);
 #if DEBUG
-                printf("%s", line);
+                printf("%x", line);
 #endif
-                fprintf(output_file, "%s", line);
+                fprintf(output_file, "%x", line);
         }
 
         fclose(input_file);
