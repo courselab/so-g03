@@ -18,13 +18,13 @@
 /* Define a structure to hold instruction mappings */
 typedef struct {
         char *instruction;
-        unsigned char machine_code;
+        unsigned int machine_code;
 } InstructionMapping;
 
 /* Define a structure to hold argument mappings */
 typedef struct {
         char *argument;
-        unsigned char machine_code;
+        unsigned int machine_code;
 } ArgumentMapping;
 
 /* Define instruction mappings */
@@ -44,7 +44,7 @@ ArgumentMapping arguments[] = {
 };
 
 /*Function to get opcode for a given instruction*/
-unsigned char get_opcode(const char *instruction)
+unsigned int get_opcode(const char *instruction)
 {
         int i;
         /*Iterate through the lookup table*/
@@ -60,7 +60,7 @@ unsigned char get_opcode(const char *instruction)
 }
 
 /*Function to get opcode for a given instruction*/
-unsigned char get_argument(const char *argument)
+unsigned int get_argument(const char *argument)
 {
         int i;
         /*Iterate through the lookup table*/
@@ -168,9 +168,9 @@ void parse_file(const char *filename)
                 trim_line(line);
                 pattern_match(line);
 #if DEBUG
-                printf("%x", line);
+                printf("%s", line);
 #endif
-                fprintf(output_file, "%x", line);
+                fprintf(output_file, "%s", line);
         }
 
         fclose(input_file);
