@@ -75,7 +75,8 @@ char *get_argument(const char *argument)
 
 char *trim_line(char *str)
 {
-        int i, j;
+        int i; /* index into input string */
+        int j; /* index into output string */
         int len = strlen(str);
 
         for (i = 0, j = 0; i < len; i++) {
@@ -108,6 +109,27 @@ const char *pattern_match(char *str)
         char *instruction = strtok(strdup(str), " ");
         if (instruction == NULL) {
                 return beggining;
+        /************ PREPROCESSOR DIRECTIVES *************/
+        } else if (strcmp(instruction, ".code16") == 0) {
+                *str = 0;
+        } else if (strcmp(instruction, ".global") == 0) {
+                *str = 0;
+        } else if (strcmp(instruction, ".fill") == 0) {
+                /* Pad with zeros */
+        } else if (strcmp(instruction, ".word") == 0) {
+                /* Boot signature */
+        /*************************************************/
+        /********************** LABELS *******************/
+        } else if (strcmp(instruction, "begin:") == 0) {
+                *str = 0;
+        } else if (strcmp(instruction, "loop:") == 0) {
+                *str = 0;
+        } else if (strcmp(instruction, "halt:") == 0) {
+                *str = 0;
+        } else if (strcmp(instruction, "msg:") == 0) {
+                *str = 0;
+        /*************************************************/
+        /********************* COMMANDS ******************/
         } else if (strcmp(instruction, "mov") == 0) {
                 /* mov instruction*/
                 char *argument = strdup(strtok(NULL, ","));
@@ -119,20 +141,13 @@ const char *pattern_match(char *str)
                 char *argument_code = get_argument(argument);
                 strcat(opcode, argument_code);
                 strcpy(str, opcode);
-        } else if (strcmp(instruction, ".code16") == 0) {
-                *str = 0;
-        } else if (strcmp(instruction, ".global") == 0) {
-                *str = 0;
         } else if (strcmp(instruction, "cmp") == 0) {
                 /* cmp instruction */
                 /* Loop while char is not 0x0 */
         } else if (strcmp(instruction, "int") == 0) {
                 /* Call BIOS video interrupt */
-        } else if (strcmp(instruction, ".fill") == 0) {
-                /* Pad with zeros */
-        } else if (strcmp(instruction, ".word") == 0) {
-                /* Boot signature */
         }
+        /*************************************************/
 
         return str;
 }
