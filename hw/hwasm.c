@@ -28,44 +28,47 @@ typedef struct {
 
 /* Define instruction mappings */
 InstructionMapping opcodes[] = {
-    {"mov%ah", "b4"},
-    {"mov%al", "b4"},
-    {"mov%ebx", "bb"},
+    {"mov%ah", "b4"}, {"mov%al", "b4"}, {"mov%bx", "bb"}, {"cmp", ""},
+    {"je", ""},       {"int", ""},      {"add", ""},      {"jmp", ""},
+    {"hlt", ""},      {".string", ""},  {".fill", ""},    {".word", ""},
 };
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", "0e"},
-    {"$0x878a0000", "00008a87"},
+    {"$0xe", "0e"}, {"$0x0", "00008a87"}, {"$0x878a0000", "00008a87"},
+    {"halt", "00"}, {"$0x10", "10"},      {"$0x1", "1"},
 };
 
-
-/*Function to get opcode for a given instruction*/ 
- char *get_opcode(const char *instruction) {
-    /*Iterate through the lookup table*/ 
-    for (int i = 0; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
-        /*Compare the instruction*/ 
-        if (strcmp(instruction, opcodes[i].instruction) == 0) {
-            /*Return the corresponding opcode*/ 
-            return opcodes[i].machine_code;
+/*Function to get opcode for a given instruction*/
+char *get_opcode(const char *instruction)
+{
+        int i;
+        /*Iterate through the lookup table*/
+        for (i = 0; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
+                /*Compare the instruction*/
+                if (strcmp(instruction, opcodes[i].instruction) == 0) {
+                        /*Return the corresponding opcode*/
+                        return opcodes[i].machine_code;
+                }
         }
-    }
-    /*If instruction not found, return NULL*/ 
-    return NULL;
+        /*If instruction not found, return NULL*/
+        return NULL;
 }
 
-/*Function to get opcode for a given instruction*/ 
- char *get_argument(const char *argument) {
-    /*Iterate through the lookup table*/ 
-    for (int i = 0; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
-        /*Compare the instruction*/ 
-        if (strcmp(argument, arguments[i].argument) == 0) {
-            /*Return the corresponding opcode*/ 
-            return arguments[i].machine_code;
+/*Function to get opcode for a given instruction*/
+char *get_argument(const char *argument)
+{
+        int i;
+        /*Iterate through the lookup table*/
+        for (i = 0; i < sizeof(opcodes) / sizeof(opcodes[0]); ++i) {
+                /*Compare the instruction*/
+                if (strcmp(argument, arguments[i].argument) == 0) {
+                        /*Return the corresponding opcode*/
+                        return arguments[i].machine_code;
+                }
         }
-    }
-    /*If instruction not found, return NULL*/ 
-    return NULL;
+        /*If instruction not found, return NULL*/
+        return NULL;
 }
 
 char *trim_comment(char *str)
@@ -106,6 +109,20 @@ char *trim_tabs(char *str)
         return str;
 }
 
+char *trim_newline(char *str)
+{
+        int i, j;
+        int len = strlen(str);
+
+        for (i = 0, j = 0; i < len; i++) {
+                if (str[i] != '\n') {
+                        str[j++] = str[i];
+                }
+        }
+        str[j] = '\0'; /* Null-terminate the string */
+        return str;
+}
+
 char *extract_instruction(char *str)
 {
         char *instruction = strtok(str, " ");
@@ -134,7 +151,7 @@ const char *pattern_match(char *str)
         char *instruction = strtok(strdup(str), " ");
         if (instruction == NULL) {
                 return beggining;
-        } else if(strcmp(instruction, "mov") == 0){
+        } else if (strcmp(instruction, "mov") == 0) {
                 /* mov instruction*/
                 char *argument = strdup(strtok(NULL, ","));
                 char *reg = strtok(NULL, " ");
@@ -142,13 +159,16 @@ const char *pattern_match(char *str)
 
                 char opcode[255];
                 strcpy(opcode, get_opcode(instruction));
-                char * argument_code = get_argument(argument);
+                char *argument_code = get_argument(argument);
                 strcat(opcode, argument_code);
-                return opcode;
+                strcpy(str, opcode);
+        } else if (strcmp(instruction, "cmp") == 0) {
+                /* cmp instruction*/
+                /* Loop while char is not 0x0 */
+        } else if (strcmp(instruction, "int") == 0) {
+                /* cmp instruction*/
         }
-#if 0
-        extract_instruction(str);
-#endif
+
         return str;
 }
 
@@ -165,15 +185,11 @@ void parse_file(const char *filename)
         while (fgets(line, MAX_LINE_LENGTH, file) != NULL) {
                 trim_tabs(line);
                 trim_comment(line);
-                pattern_match(line); /*TODO trim newline character*/
+                trim_newline(line);
+                pattern_match(line);
                 printf("%s", line);
         }
 
-  #if 0
-        char * test = "mov $0xe, %ah";
-        test = pattern_match(test);
-        printf("%s", test);
-#endif
         fclose(file);
 }
 
