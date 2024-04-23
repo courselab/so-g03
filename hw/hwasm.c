@@ -1,5 +1,5 @@
 /*
- *    SPDX-FileCopyrightText: 2024 Luiz Antonio de Abreu Pereira
+ *    SPDX-FileCopyrightText: 2024 Luiz Antonio de Abreu Pereira <lap.junior@gmail.com>
  *    SPDX-FileCopyrightText: 2024 Tiago Oliva <tiago.oliva.costa@gmail.com>
  *
  *    SPDX-License-Identifier: GPL-3.0-or-later
@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG 1
 #define MAX_LINE_LENGTH 100 /* assuming lines are less than 100 characters long */
 
 /* Define a structure to hold instruction mappings */
@@ -35,8 +36,9 @@ InstructionMapping opcodes[] = {
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", "0e"}, {"$0x0", "00008a87"}, {"$0x878a0000", "00008a87"},
-    {"halt", "00"}, {"$0x10", "10"},      {"$0x1", "1"},
+    {"$0xe", "0e"},  {"$0x0", "00008a87"}, {"$0x878a0000", "00008a87"}, {"halt", "00"},
+    {"$0x10", "10"}, {"$0x1", "1"},        {"0xaa55", "55aa"},          {"msg(%bx)", ""},
+
 };
 
 /*Function to get opcode for a given instruction*/
@@ -71,7 +73,7 @@ char *get_argument(const char *argument)
         return NULL;
 }
 
-char *trim_comment(char *str)
+char *trim_line(char *str)
 {
         int i, j;
         int len = strlen(str);
@@ -82,65 +84,20 @@ char *trim_comment(char *str)
                         break;
                 } else if (str[i] == '#') {
                         /* Found comment in the end of the line, ignore the rest of the line */
-                        str[j++] = '\n';
+                        str[j++] = 0;
                         break;
+                } else if (str[i] == '\t' || str[i] == '\n') {
+                        /* Discard tabs and newline characters */
+                        continue;
                 }
 
-                /* Copy characters if not in a comment*/
+                /* Otherwise, just copy characters */
                 str[j++] = str[i];
         }
 
         /* Null-terminate the string */
         str[j] = '\0';
         return str;
-}
-
-char *trim_tabs(char *str)
-{
-        int i, j;
-        int len = strlen(str);
-
-        for (i = 0, j = 0; i < len; i++) {
-                if (str[i] != '\t') {
-                        str[j++] = str[i];
-                }
-        }
-        str[j] = '\0'; /* Null-terminate the string */
-        return str;
-}
-
-char *trim_newline(char *str)
-{
-        int i, j;
-        int len = strlen(str);
-
-        for (i = 0, j = 0; i < len; i++) {
-                if (str[i] != '\n') {
-                        str[j++] = str[i];
-                }
-        }
-        str[j] = '\0'; /* Null-terminate the string */
-        return str;
-}
-
-char *extract_instruction(char *str)
-{
-        char *instruction = strtok(str, " ");
-        if (instruction == NULL)
-                return NULL;
-
-        char *comma = strchr(instruction, ',');
-        printf("%s\n", comma);
-        if (comma == NULL) {
-                return NULL;
-        } else {
-                strcat(instruction, comma);
-        }
-
-        *comma = '\0'; /* Replace comma with null terminator to separate the instruction*/
-
-        printf("%s", instruction);
-        return instruction;
 }
 
 /* Identify opcodes and replace them by corresponding values*/
@@ -162,11 +119,19 @@ const char *pattern_match(char *str)
                 char *argument_code = get_argument(argument);
                 strcat(opcode, argument_code);
                 strcpy(str, opcode);
+        } else if (strcmp(instruction, ".code16") == 0) {
+                *str = 0;
+        } else if (strcmp(instruction, ".global") == 0) {
+                *str = 0;
         } else if (strcmp(instruction, "cmp") == 0) {
-                /* cmp instruction*/
+                /* cmp instruction */
                 /* Loop while char is not 0x0 */
         } else if (strcmp(instruction, "int") == 0) {
-                /* cmp instruction*/
+                /* Call BIOS video interrupt */
+        } else if (strcmp(instruction, ".fill") == 0) {
+                /* Pad with zeros */
+        } else if (strcmp(instruction, ".word") == 0) {
+                /* Boot signature */
         }
 
         return str;
@@ -174,23 +139,26 @@ const char *pattern_match(char *str)
 
 void parse_file(const char *filename)
 {
-        FILE *file = fopen(filename, "r");
-        if (file == NULL) {
+        FILE *input_file = fopen(filename, "r");
+        if (input_file == NULL) {
                 printf("Error opening file %s.\n", filename);
                 exit(1);
         }
 
+        FILE *output_file = fopen("output.bin", "w");
         char line[MAX_LINE_LENGTH];
 
-        while (fgets(line, MAX_LINE_LENGTH, file) != NULL) {
-                trim_tabs(line);
-                trim_comment(line);
-                trim_newline(line);
+        while (fgets(line, MAX_LINE_LENGTH, input_file) != NULL) {
+                trim_line(line);
                 pattern_match(line);
+#if DEBUG
                 printf("%s", line);
+#endif
+                fprintf(output_file, "%s", line);
         }
 
-        fclose(file);
+        fclose(input_file);
+        fclose(output_file);
 }
 
 int main()

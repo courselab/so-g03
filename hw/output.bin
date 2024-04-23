@@ -1,0 +1,1 @@
+begin:b40ebb00008a87loop:b4cmp $0x0, %alje haltint $0x10add $0x1, %bxjmp loophalt:hltjmp haltmsg:.string "Hello World".fill 510 - (. - begin), 1, 0.word 0xaa55
