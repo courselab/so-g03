@@ -38,7 +38,7 @@ InstructionMapping opcodes[] = {
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", 0xe},   {"$0x0", 0x0}, 
+    {"$0xe", 0xe},   {"$0x0", 0x0000}, {"$0x1", 0x1}, {"halt", 0x14},
     {"$0x10", 0x10}, {"0xaa55", 0x55aa}, {"msg(%bx)", 0x177c},
 
 };
@@ -56,7 +56,7 @@ unsigned int get_opcode(const char *instruction)
                 }
         }
         /*If instruction not found, return NULL*/
-        return NULL;
+        return -1;
 }
 
 /*Function to get opcode for a given instruction*/
@@ -72,7 +72,7 @@ unsigned int get_argument(const char *argument)
                 }
         }
         /*If instruction not found, return NULL*/
-        return NULL;
+        return -1;
 }
 
 char *trim_line(char *str)
@@ -132,18 +132,27 @@ const char *pattern_match(char *str)
                 *str = 0;
         /*************************************************/
         /********************* COMMANDS ******************/
-        } else if (strcmp(instruction, "mov") == 0) {
+        } else if (strcmp(instruction, "mov") == 0 || strcmp(instruction, "cmp") == 0 || strcmp(instruction, "add") == 0) {
                 /* mov instruction*/
                 char *argument = strdup(strtok(NULL, ","));
                 char *reg = strtok(NULL, " ");
                 strcat(instruction, reg);
 
                 unsigned char opcode = get_opcode(instruction);
-                unsigned char argument_code = get_argument(argument);
+
+                unsigned char argument_code;
+                if (*argument == '$'){ /* check first character */
+                        /* is a literal number */
+                        argument_code = (int)strtol(++argument, NULL, 16);       // number base 16
+                } else {
+                        argument_code = get_argument(argument);
+                }
+                
                 unsigned int instruction = (opcode << 8) | argument_code;
                 sprintf(str, "%x", instruction);
         } else if (strcmp(instruction, "cmp") == 0) {
                 /* cmp instruction */
+                
                 /* Loop while char is not 0x0 */
         } else if (strcmp(instruction, "int") == 0) {
                 /* Call BIOS video interrupt */
