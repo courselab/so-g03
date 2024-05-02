@@ -7,10 +7,10 @@ void write_hex_to_binary_file(const char* hex_array, size_t array_size, const ch
         return;
     }
 
-    for (size_t i = 0; i < array_size; ++i) {
+    for (size_t i = 0; i < array_size; i += 2) {
         unsigned int value;
-        sscanf(&hex_array[i * 2], "%2x", &value);
-        fwrite(&value, sizeof(unsigned int), 1, output_file);
+        sscanf(&hex_array[i], "%2x", &value);
+        fwrite(&value, sizeof(unsigned char), 1, output_file);
     }
 
     fclose(output_file);
