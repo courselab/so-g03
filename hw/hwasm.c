@@ -29,17 +29,15 @@ typedef struct {
 
 /* Define instruction mappings */
 InstructionMapping opcodes[] = {
-    {"mov%ah", 0xb4}, {"mov%al", 0x8a}, {"mov%bx", 0xbb}, {"cmp%al", 0x3c},
-    {"add%bx", 0x83c3},
-    {"je", 0x74}, {"int", 0xcd}, {"jmp", 0xeb},
-    {"halt:", 0x14},
-    {"hlt", 0xf4},      {".string", 0x0},  {".fill", 0x0},    {".word", 0x0},
+    {"mov%ah", 0xb4},  {"mov%al", 0x8a}, {"mov%bx", 0xbb}, {"cmp%al", 0x3c}, {"add%bx", 0x83c3},
+    {"je", 0x74},      {"int", 0xcd},    {"jmp", 0xeb},    {"halt:", 0x14},  {"hlt", 0xf4},
+    {".string", 0x48}, {".fill", 0x0},   {".word", 0x0},
 };
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", 0xe},   {"$0x0", 0x0000}, {"$0x1", 0x1}, {"halt", 0x14},
-    {"$0x10", 0x10}, {"0xaa55", 0x55aa}, {"msg(%bx)", 0x177c},
+    {"$0xe", 0xe}, {"$0x0", 0x0000}, {"$0x1", 0x1},      {"halt", 0x14},
+    {"loop", 0x5}, {"$0x10", 0x10},  {"0xaa55", 0x55aa}, {"msg(%bx)", 0x177c},
 
 };
 
@@ -103,6 +101,8 @@ char *trim_line(char *str)
         return str;
 }
 
+bool is_instruction(char *instruction, char *pattern) { return strcmp(instruction, pattern) == 0; }
+
 /* Identify opcodes and replace them by corresponding values*/
 const char *pattern_match(char *str)
 {
@@ -111,17 +111,34 @@ const char *pattern_match(char *str)
         char *instruction = strtok(strdup(str), " ");
         if (instruction == NULL) {
                 return beggining;
-        /************ PREPROCESSOR DIRECTIVES *************/
+                /************ PREPROCESSOR DIRECTIVES *************/
         } else if (strcmp(instruction, ".code16") == 0) {
                 *str = 0;
         } else if (strcmp(instruction, ".global") == 0) {
                 *str = 0;
-        } else if (strcmp(instruction, ".fill") == 0) {
+        } else if (is_instruction(instruction, ".string")) {
+                /* Hello World string */
+                unsigned char opcode = get_opcode(instruction);
+
+                char *text = strtok(NULL, "\"");
+                unsigned char argument_code;
+                int len = strlen(text);
+
+                char hex[100], string[50];
+
+                /*Convert text to hex.*/
+                int i; /* index into input string */
+                int j; /* index into output string */
+                for (i = 0, j = 0; i < len; ++i, j += 2) {
+                        sprintf(str + j, "%02x", text[i] & 0xff);
+                }
+
+        } else if (is_instruction(instruction, ".fill")) {
                 /* Pad with zeros */
         } else if (strcmp(instruction, ".word") == 0) {
                 /* Boot signature */
-        /*************************************************/
-        /********************** LABELS *******************/
+                /*************************************************/
+                /********************** LABELS *******************/
         } else if (strcmp(instruction, "begin:") == 0) {
                 *str = 0;
         } else if (strcmp(instruction, "loop:") == 0) {
@@ -130,10 +147,11 @@ const char *pattern_match(char *str)
                 *str = 0;
         } else if (strcmp(instruction, "msg:") == 0) {
                 *str = 0;
-        /*************************************************/
-        /********************* COMMANDS ******************/
-        } else if (strcmp(instruction, "mov") == 0 || strcmp(instruction, "cmp") == 0 || strcmp(instruction, "add") == 0) {
-                /* mov instruction*/
+                /*************************************************/
+                /********************* COMMANDS ******************/
+        } else if (is_instruction(instruction, "mov") || is_instruction(instruction, "cmp") ||
+                   is_instruction(instruction, "add")) {
+                /* 2 part instruction*/
                 char *argument = strdup(strtok(NULL, ","));
                 char *reg = strtok(NULL, " ");
                 strcat(instruction, reg);
@@ -141,25 +159,71 @@ const char *pattern_match(char *str)
                 unsigned char opcode = get_opcode(instruction);
 
                 unsigned char argument_code;
-                if (*argument == '$'){ /* check first character */
+                if (*argument == '$') { /* check first character */
                         /* is a literal number */
-                        argument_code = (int)strtol(++argument, NULL, 16);       // number base 16
+                        argument_code = (int)strtol(++argument, NULL, 16); /* number base 16 */
                 } else {
                         argument_code = get_argument(argument);
                 }
-                
+
                 unsigned int instruction = (opcode << 8) | argument_code;
                 sprintf(str, "%x", instruction);
-        } else if (strcmp(instruction, "cmp") == 0) {
-                /* cmp instruction */
-                
+        } else if (is_instruction(instruction, "je") || is_instruction(instruction, "jmp") ||
+                   is_instruction(instruction, "int")) {
+                /* Jump to halt */
+                unsigned char opcode = get_opcode(instruction);
+
+                char *argument = strtok(NULL, " ");
+                unsigned char argument_code;
+                if (*argument == '$') { /* check first character */
+                        /* is a literal number */
+                        argument_code = (int)strtol(++argument, NULL, 16); /* number base 16 */
+                } else {
+                        argument_code = get_argument(argument);
+                }
+
+                unsigned int instruction = (opcode << 8) | argument_code;
+                sprintf(str, "%x", instruction);
+
                 /* Loop while char is not 0x0 */
-        } else if (strcmp(instruction, "int") == 0) {
-                /* Call BIOS video interrupt */
+        } else if (is_instruction(instruction, "hlt")) {
+                unsigned char opcode = get_opcode(instruction);
+                sprintf(str, "%x", opcode);
         }
         /*************************************************/
 
         return str;
+}
+
+char * write_output(char *buffer, FILE* output_file)
+{
+        if (!*buffer) {
+                return 0 ;
+        }
+
+        const char binary[16][5] = {"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111",
+                                    "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111"};
+        const char digits[] = "0123456789abcdef";
+
+        char input[16];
+        strcpy(input, buffer);
+        char res[1024];
+        res[0] = '\0';
+        int p = 0;
+
+        while (input[p]) {
+                const char *v = strchr(digits, input[p++]);
+                if (v){strcat(res, binary[v - digits]);}
+                        
+        }
+        /* res now contains the binary representation of the number */
+
+        char *output;
+        strcpy(output, res);
+        
+        /* TODO write as binary instead of hex */
+        return output;
+ 
 }
 
 void parse_file(const char *filename)
@@ -170,16 +234,21 @@ void parse_file(const char *filename)
                 exit(1);
         }
 
-        FILE *output_file = fopen("output.bin", "w");
+        FILE *output_file = fopen("output.bin", "wb");
         char line[MAX_LINE_LENGTH];
+        char *buffer;
 
         while (fgets(line, MAX_LINE_LENGTH, input_file) != NULL) {
                 trim_line(line);
-                pattern_match(line);
+                buffer = pattern_match(line);
 #if DEBUG
                 printf("%s", line);
 #endif
-                fprintf(output_file, "%s", line);
+                char* output  = write_output(line, output_file);
+                if (output) {
+                        fwrite(output, sizeof(output), 1, output_file);
+                }
+
         }
 
         fclose(input_file);
