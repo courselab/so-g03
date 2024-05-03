@@ -101,7 +101,10 @@ char *trim_line(char *str)
         return str;
 }
 
-bool is_instruction(char *instruction, char *pattern) { return strcmp(instruction, pattern) == 0; }
+bool check_instruction(char *instruction, char *pattern)
+{
+        return strcmp(instruction, pattern) == 0;
+}
 
 /* Identify opcodes and replace them by corresponding values*/
 const char *pattern_match(char *str)
@@ -116,15 +119,11 @@ const char *pattern_match(char *str)
                 *str = 0;
         } else if (strcmp(instruction, ".global") == 0) {
                 *str = 0;
-        } else if (is_instruction(instruction, ".string")) {
+        } else if (check_instruction(instruction, ".string")) {
                 /* Hello World string */
-                unsigned char opcode = get_opcode(instruction);
 
                 char *text = strtok(NULL, "\"");
-                unsigned char argument_code;
                 int len = strlen(text);
-
-                char hex[100], string[50];
 
                 /*Convert text to hex.*/
                 int i; /* index into input string */
@@ -133,7 +132,7 @@ const char *pattern_match(char *str)
                         sprintf(str + j, "%02x", text[i] & 0xff);
                 }
 
-        } else if (is_instruction(instruction, ".fill")) {
+        } else if (check_instruction(instruction, ".fill")) {
                 /* Pad with zeros */
         } else if (strcmp(instruction, ".word") == 0) {
                 /* Boot signature */
@@ -149,8 +148,8 @@ const char *pattern_match(char *str)
                 *str = 0;
                 /*************************************************/
                 /********************* COMMANDS ******************/
-        } else if (is_instruction(instruction, "mov") || is_instruction(instruction, "cmp") ||
-                   is_instruction(instruction, "add")) {
+        } else if (check_instruction(instruction, "mov") || check_instruction(instruction, "cmp") ||
+                   check_instruction(instruction, "add")) {
                 /* 2 part instruction*/
                 char *argument = strdup(strtok(NULL, ","));
                 char *reg = strtok(NULL, " ");
@@ -168,8 +167,8 @@ const char *pattern_match(char *str)
 
                 unsigned int instruction = (opcode << 8) | argument_code;
                 sprintf(str, "%x", instruction);
-        } else if (is_instruction(instruction, "je") || is_instruction(instruction, "jmp") ||
-                   is_instruction(instruction, "int")) {
+        } else if (check_instruction(instruction, "je") || check_instruction(instruction, "jmp") ||
+                   check_instruction(instruction, "int")) {
                 /* Jump to halt */
                 unsigned char opcode = get_opcode(instruction);
 
@@ -186,7 +185,7 @@ const char *pattern_match(char *str)
                 sprintf(str, "%x", instruction);
 
                 /* Loop while char is not 0x0 */
-        } else if (is_instruction(instruction, "hlt")) {
+        } else if (check_instruction(instruction, "hlt")) {
                 unsigned char opcode = get_opcode(instruction);
                 sprintf(str, "%x", opcode);
         }
@@ -195,35 +194,14 @@ const char *pattern_match(char *str)
         return str;
 }
 
-char * write_output(char *buffer, FILE* output_file)
+void write_hex_to_binary_file(const char *hex_array, size_t array_size, FILE *output_file)
 {
-        if (!*buffer) {
-                return 0 ;
+        size_t i;
+        for (i = 0; i < array_size; i += 2) {
+                unsigned int value;
+                sscanf(&hex_array[i], "%2x", &value);
+                fwrite(&value, sizeof(unsigned char), 1, output_file);
         }
-
-        const char binary[16][5] = {"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111",
-                                    "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111"};
-        const char digits[] = "0123456789abcdef";
-
-        char input[16];
-        strcpy(input, buffer);
-        char res[1024];
-        res[0] = '\0';
-        int p = 0;
-
-        while (input[p]) {
-                const char *v = strchr(digits, input[p++]);
-                if (v){strcat(res, binary[v - digits]);}
-                        
-        }
-        /* res now contains the binary representation of the number */
-
-        char *output;
-        strcpy(output, res);
-        
-        /* TODO write as binary instead of hex */
-        return output;
- 
 }
 
 void parse_file(const char *filename)
@@ -236,7 +214,7 @@ void parse_file(const char *filename)
 
         FILE *output_file = fopen("output.bin", "wb");
         char line[MAX_LINE_LENGTH];
-        char *buffer;
+        const char *buffer;
 
         while (fgets(line, MAX_LINE_LENGTH, input_file) != NULL) {
                 trim_line(line);
@@ -244,11 +222,7 @@ void parse_file(const char *filename)
 #if DEBUG
                 printf("%s", line);
 #endif
-                char* output  = write_output(line, output_file);
-                if (output) {
-                        fwrite(output, sizeof(output), 1, output_file);
-                }
-
+                write_hex_to_binary_file(buffer, strlen(buffer), output_file);
         }
 
         fclose(input_file);
