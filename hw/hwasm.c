@@ -15,6 +15,8 @@
 #define DEBUG 1
 #define MAX_LINE_LENGTH 100 /* assuming lines are less than 100 characters long */
 
+unsigned int writer_count;
+
 /* Define a structure to hold instruction mappings */
 typedef struct {
         char *instruction;
@@ -134,10 +136,15 @@ const char *pattern_match(char *str)
 
         } else if (check_instruction(instruction, ".fill")) {
                 /* Pad with zeros */
-        } else if (strcmp(instruction, ".word") == 0) {
+                int i; /* index into input string */
+                for (i = 0; i < 105; ++i) {
+                        sprintf(str + i, "%x", 0);
+                }
+        } else if (check_instruction(instruction, ".word")) {
                 /* Boot signature */
                 /*************************************************/
                 /********************** LABELS *******************/
+                sprintf(str, "%x", 0x55aa);
         } else if (strcmp(instruction, "begin:") == 0) {
                 *str = 0;
         } else if (strcmp(instruction, "loop:") == 0) {
@@ -190,7 +197,6 @@ const char *pattern_match(char *str)
                 sprintf(str, "%x", opcode);
         }
         /*************************************************/
-
         return str;
 }
 
@@ -222,7 +228,16 @@ void parse_file(const char *filename)
 #if DEBUG
                 printf("%s", line);
 #endif
-                write_hex_to_binary_file(buffer, strlen(buffer), output_file);
+                if (!*buffer) {
+                        continue;
+                }
+                unsigned int buffer_size = strlen(buffer);
+                writer_count += buffer_size;
+                if (buffer_size > 100) {
+                        write_hex_to_binary_file(buffer, buffer_size, output_file);
+                } else {
+                        write_hex_to_binary_file(buffer, buffer_size, output_file);
+                }
         }
 
         fclose(input_file);
