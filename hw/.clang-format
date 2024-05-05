@@ -1,0 +1,9 @@
+﻿---
+BasedOnStyle: LLVM
+BreakBeforeBraces: Linux
+ColumnLimit: '100'
+IndentWidth: '8'
+Standard: Auto
+TabWidth: '8'
+
+...
