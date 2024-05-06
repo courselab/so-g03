@@ -7,10 +7,11 @@
  *    This file is part of SYSeg, available at https://gitlab.com/monaco/syseg.
  */
 
-#include <stdbool.h>
-#include <stdio.h>
+#include <limits.h>  /* for CHAR_BIT */
+#include <stdbool.h> /* for TRUE and FALSE */
+#include <stdio.h>   /* for printf and file handling */
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> /* for multiple string operations */
 
 #define DEBUG 1
 #define MAX_LINE_LENGTH 100 /* assuming lines are less than 100 characters long */
@@ -33,14 +34,14 @@ typedef struct {
 
 /* Define instruction mappings */
 InstructionMapping opcodes[] = {
-    {"mov%ah", 0xb4},  {"mov%al", 0x8a}, {"mov%bx", 0xbb}, {"cmp%al", 0x3c}, {"add%bx", 0x83c3},
-    {"je", 0x74},      {"int", 0xcd},    {"jmp", 0xeb},    {"halt:", 0x14},  {"hlt", 0xf4},
-    {".string", 0x48}, {".fill", 0x0},   {".word", 0x0},
+    {"mov%ah", 0xb4},  {"mov%al", 0x8a87}, {"mov%bx", 0xbb}, {"cmp%al", 0x3c}, {"add%bx", 0x83c3},
+    {"je", 0x74},      {"int", 0xcd},      {"jmp", 0xeb},    {"halt:", 0x14},  {"hlt", 0xf4},
+    {".string", 0x48}, {".fill", 0x0},     {".word", 0x0},
 };
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", 0xe}, {"$0x0", 0x0000}, {"$0x1", 0x1},      {"halt", 0x14},
+    {"$0xe", 0xe}, {"$0x0", 0x0000}, {"$0x1", 0x1},      {"halt", 0x07},
     {"loop", 0x5}, {"$0x10", 0x10},  {"0xaa55", 0x55aa}, {"msg(%bx)", 0x177c},
 
 };
@@ -110,6 +111,48 @@ bool check_instruction(char *instruction, char *pattern)
         return strcmp(instruction, pattern) == 0;
 }
 
+/* Jump instructions are calculated in a relative basis to the label.
+ * Halt label is address 0x14. The argument is calculated as
+ *      argument = label - current_pointer (1)
+ * For instance
+ *      0b: 74 07
+ * is je 07 bytes ahead. That is 0b = 11, after 74 07 the instruction
+ * pointer (IP) is at location 13, jump +7 from 13 means jump to
+ * location 20, i.e. 0x14 in hex. From Eq.(1):
+ *      0x07 = 0x14 - 0x13.
+ *
+ * */
+int process_jmp(char *instruction, char *argument)
+{
+        /*  b:  74 07   je  0x14
+         *  12: eb f1   jmp 0x5
+         *  15: eb fd   jmp 0x14
+         * */
+        return -1;
+}
+
+unsigned int process_instruction(char *instruction, char *argument)
+{
+        unsigned int opcode = get_opcode(instruction);
+
+        unsigned int argument_code;
+
+        /* check first character */
+        if (*argument == '$') {
+                /* is a literal number */
+                argument_code = (int)strtol(++argument, NULL, 16); /* number base 16 */
+        } else {
+                argument_code = get_argument(argument);
+        }
+
+        unsigned int argument_code_size = sizeof(argument_code) * CHAR_BIT / 4; /* default */
+        if (opcode == get_opcode("mov%bx") || opcode == get_opcode("mov%al")) {
+                argument_code_size = 16;
+        }
+
+        return (opcode << argument_code_size) | argument_code;
+}
+
 /* Identify opcodes and replace them by corresponding values*/
 void pattern_match(char *str, char *out)
 {
@@ -123,7 +166,6 @@ void pattern_match(char *str, char *out)
                 *out = 0;
         } else if (check_instruction(instruction, ".string")) {
                 /* Hello World string */
-
                 char *text = strtok(NULL, "\"");
                 int len = strlen(text);
 
@@ -162,38 +204,14 @@ void pattern_match(char *str, char *out)
                 char *reg = strtok(NULL, " ");
                 strcat(instruction, reg);
 
-                unsigned char opcode = get_opcode(instruction);
-
-                unsigned char argument_code;
-                if (*argument == '$') { /* check first character */
-                        /* is a literal number */
-                        argument_code = (int)strtol(++argument, NULL, 16); /* number base 16 */
-                } else {
-                        argument_code = get_argument(argument);
-                }
-
-                unsigned int instruction = (opcode << 8) | argument_code;
-                sprintf(out, "%x", instruction);
+                unsigned int hex_instruction = process_instruction(instruction, argument);
+                sprintf(out, "%x", hex_instruction);
         } else if (check_instruction(instruction, "je") || check_instruction(instruction, "jmp") ||
                    check_instruction(instruction, "int")) {
-                /* Jump to halt */
-                unsigned char opcode = get_opcode(instruction);
-
                 char *argument = strtok(NULL, " ");
-                unsigned char argument_code;
 
-                /* check first character */
-                if (*argument == '$') {
-                        /* is a literal number */
-                        argument_code = (int)strtol(++argument, NULL, 16); /* number base 16 */
-                } else {
-                        argument_code = get_argument(argument);
-                }
-
-                unsigned int instruction = (opcode << 8) | argument_code;
-                sprintf(out, "%x", instruction);
-
-                /* Loop while char is not 0x0 */
+                unsigned int hex_instruction = process_instruction(instruction, argument);
+                sprintf(out, "%x", hex_instruction);
         } else if (check_instruction(instruction, "hlt")) {
                 unsigned char opcode = get_opcode(instruction);
                 sprintf(out, "%x", opcode);
