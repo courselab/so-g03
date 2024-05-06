@@ -14,6 +14,8 @@
 
 #define DEBUG 1
 #define MAX_LINE_LENGTH 100 /* assuming lines are less than 100 characters long */
+#define BOOT_SECTOR_SIZE 512
+#define INPUT_FILE "hw.S"
 
 unsigned int writer_count;
 
@@ -109,18 +111,16 @@ bool check_instruction(char *instruction, char *pattern)
 }
 
 /* Identify opcodes and replace them by corresponding values*/
-const char *pattern_match(char *str)
+void pattern_match(char *str, char *out)
 {
-        const char *beggining = str;
-
         char *instruction = strtok(strdup(str), " ");
         if (instruction == NULL) {
-                return beggining;
+                return;
                 /************ PREPROCESSOR DIRECTIVES *************/
         } else if (strcmp(instruction, ".code16") == 0) {
-                *str = 0;
+                *out = 0;
         } else if (strcmp(instruction, ".global") == 0) {
-                *str = 0;
+                *out = 0;
         } else if (check_instruction(instruction, ".string")) {
                 /* Hello World string */
 
@@ -131,28 +131,28 @@ const char *pattern_match(char *str)
                 int i; /* index into input string */
                 int j; /* index into output string */
                 for (i = 0, j = 0; i < len; ++i, j += 2) {
-                        sprintf(str + j, "%02x", text[i] & 0xff);
+                        sprintf(out + j, "%02x", text[i] & 0xff);
                 }
 
         } else if (check_instruction(instruction, ".fill")) {
                 /* Pad with zeros */
                 int i; /* index into input string */
-                for (i = 0; i < 105; ++i) {
-                        sprintf(str + i, "%x", 0);
+                for (i = 0; i < 510 - writer_count; ++i) {
+                        sprintf(out + i, "%x", 0);
                 }
         } else if (check_instruction(instruction, ".word")) {
                 /* Boot signature */
                 /*************************************************/
                 /********************** LABELS *******************/
-                sprintf(str, "%x", 0x55aa);
+                sprintf(out, "%x", 0x55aa);
         } else if (strcmp(instruction, "begin:") == 0) {
-                *str = 0;
+                *out = 0;
         } else if (strcmp(instruction, "loop:") == 0) {
-                *str = 0;
+                *out = 0;
         } else if (strcmp(instruction, "halt:") == 0) {
-                *str = 0;
+                *out = 0;
         } else if (strcmp(instruction, "msg:") == 0) {
-                *str = 0;
+                *out = 0;
                 /*************************************************/
                 /********************* COMMANDS ******************/
         } else if (check_instruction(instruction, "mov") || check_instruction(instruction, "cmp") ||
@@ -173,7 +173,7 @@ const char *pattern_match(char *str)
                 }
 
                 unsigned int instruction = (opcode << 8) | argument_code;
-                sprintf(str, "%x", instruction);
+                sprintf(out, "%x", instruction);
         } else if (check_instruction(instruction, "je") || check_instruction(instruction, "jmp") ||
                    check_instruction(instruction, "int")) {
                 /* Jump to halt */
@@ -181,7 +181,9 @@ const char *pattern_match(char *str)
 
                 char *argument = strtok(NULL, " ");
                 unsigned char argument_code;
-                if (*argument == '$') { /* check first character */
+
+                /* check first character */
+                if (*argument == '$') {
                         /* is a literal number */
                         argument_code = (int)strtol(++argument, NULL, 16); /* number base 16 */
                 } else {
@@ -189,15 +191,14 @@ const char *pattern_match(char *str)
                 }
 
                 unsigned int instruction = (opcode << 8) | argument_code;
-                sprintf(str, "%x", instruction);
+                sprintf(out, "%x", instruction);
 
                 /* Loop while char is not 0x0 */
         } else if (check_instruction(instruction, "hlt")) {
                 unsigned char opcode = get_opcode(instruction);
-                sprintf(str, "%x", opcode);
+                sprintf(out, "%x", opcode);
         }
         /*************************************************/
-        return str;
 }
 
 void write_hex_to_binary_file(const char *hex_array, size_t array_size, FILE *output_file)
@@ -210,42 +211,43 @@ void write_hex_to_binary_file(const char *hex_array, size_t array_size, FILE *ou
         }
 }
 
-void parse_file(const char *filename)
+void parse_line(char *line, char *buffer)
 {
-        FILE *input_file = fopen(filename, "r");
-        if (input_file == NULL) {
-                printf("Error opening file %s.\n", filename);
-                exit(1);
+        trim_line(line);
+
+        char out[BOOT_SECTOR_SIZE] = {0};
+        pattern_match(line, out);
+        if (!*out) {
+                return;
         }
 
-        FILE *output_file = fopen("output.bin", "wb");
-        char line[MAX_LINE_LENGTH];
-        const char *buffer;
-
-        while (fgets(line, MAX_LINE_LENGTH, input_file) != NULL) {
-                trim_line(line);
-                buffer = pattern_match(line);
+        strcat(buffer, out);
 #if DEBUG
-                printf("%s", line);
+        printf("%s", out);
 #endif
-                if (!*buffer) {
-                        continue;
-                }
-                unsigned int buffer_size = strlen(buffer);
-                writer_count += buffer_size;
-                if (buffer_size > 100) {
-                        write_hex_to_binary_file(buffer, buffer_size, output_file);
-                } else {
-                        write_hex_to_binary_file(buffer, buffer_size, output_file);
-                }
-        }
-
-        fclose(input_file);
-        fclose(output_file);
 }
 
 int main()
 {
-        parse_file("hw.S");
+        FILE *input_file = fopen(INPUT_FILE, "r");
+        if (input_file == NULL) {
+                printf("Error opening file %s.\n", INPUT_FILE);
+                exit(1);
+        }
+
+        FILE *output_file = fopen("output.bin", "wb");
+        char line[MAX_LINE_LENGTH] = {0};
+        char buffer[BOOT_SECTOR_SIZE] = {0};
+
+        while (fgets(line, MAX_LINE_LENGTH, input_file) != NULL) {
+                parse_line(line, buffer);
+
+                writer_count = strlen(buffer);
+        }
+
+        write_hex_to_binary_file(buffer, writer_count, output_file);
+
+        fclose(input_file);
+        fclose(output_file);
         return 0;
 }
