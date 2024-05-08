@@ -251,15 +251,25 @@ void parse_line(char *line, char *buffer)
 #endif
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-        FILE *input_file = fopen(INPUT_FILE, "r");
+        /* Check if the correct number of arguments is provided */
+        if (argc != 3) {
+                printf("Usage: %s <input_file> <output_file>\n", argv[0]);
+                return 1; /* Exit with error code */
+        }
+
+        /* Assign input_file and output_file from command-line arguments */
+        char *input_filename = argv[1];
+        char *output_filename = argv[2];
+
+        FILE *input_file = fopen(input_filename, "r");
         if (input_file == NULL) {
-                printf("Error opening file %s.\n", INPUT_FILE);
+                printf("Error opening file %s.\n", input_filename);
                 exit(1);
         }
 
-        FILE *output_file = fopen("output.bin", "wb");
+        FILE *output_file = fopen(output_filename, "wb");
         char line[MAX_LINE_LENGTH] = {0};
         char buffer[BOOT_SECTOR_SIZE_CHAR] = {0};
 
