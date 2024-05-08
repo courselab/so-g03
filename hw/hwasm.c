@@ -13,9 +13,12 @@
 #include <stdlib.h>
 #include <string.h> /* for multiple string operations */
 
-#define DEBUG 1
+#define DEBUG 0
 #define MAX_LINE_LENGTH 100 /* assuming lines are less than 100 characters long */
 #define BOOT_SECTOR_SIZE 512
+#define BOOT_SIGNATURE_SIZE 2
+#define BOOT_SECTOR_SIZE_CHAR BOOT_SECTOR_SIZE * 2
+#define BOOT_SIGNATURE_SIZE_CHAR BOOT_SIGNATURE_SIZE * 2
 #define INPUT_FILE "hw.S"
 
 unsigned int writer_count;
@@ -41,7 +44,7 @@ InstructionMapping opcodes[] = {
 
 /* Define register mappings */
 ArgumentMapping arguments[] = {
-    {"$0xe", 0xe}, {"$0x0", 0x0000}, {"$0x1", 0x1},      {"halt", 0x07},
+    {"$0xe", 0xe}, {"$0x0", 0x0000}, {"$0x1", 0x1},      {"halt", 0x14},
     {"loop", 0x5}, {"$0x10", 0x10},  {"0xaa55", 0x55aa}, {"msg(%bx)", 0x177c},
 
 };
@@ -120,15 +123,14 @@ bool check_instruction(char *instruction, char *pattern)
  * pointer (IP) is at location 13, jump +7 from 13 means jump to
  * location 20, i.e. 0x14 in hex. From Eq.(1):
  *      0x07 = 0x14 - 0x13.
- *
  * */
-int process_jmp(char *instruction, char *argument)
+unsigned char process_jmp(char *instruction, int label)
 {
         /*  b:  74 07   je  0x14
          *  12: eb f1   jmp 0x5
          *  15: eb fd   jmp 0x14
          * */
-        return -1;
+        return label - (writer_count / 2 + 2);
 }
 
 unsigned int process_instruction(char *instruction, char *argument)
@@ -146,7 +148,10 @@ unsigned int process_instruction(char *instruction, char *argument)
         }
 
         unsigned int argument_code_size = sizeof(argument_code) * CHAR_BIT / 4; /* default */
-        if (opcode == get_opcode("mov%bx") || opcode == get_opcode("mov%al")) {
+        if (opcode == get_opcode("je") || opcode == get_opcode("jmp")) {
+                unsigned char relative_jmp = process_jmp(instruction, argument_code);
+                return (opcode << argument_code_size) | relative_jmp;
+        } else if (opcode == get_opcode("mov%bx") || opcode == get_opcode("mov%al")) {
                 argument_code_size = 16;
         }
 
@@ -179,8 +184,9 @@ void pattern_match(char *str, char *out)
         } else if (check_instruction(instruction, ".fill")) {
                 /* Pad with zeros */
                 int i; /* index into input string */
-                for (i = 0; i < 510 - writer_count; ++i) {
-                        sprintf(out + i, "%x", 0);
+                for (i = 0; i < (BOOT_SECTOR_SIZE_CHAR - BOOT_SIGNATURE_SIZE_CHAR) - (writer_count);
+                     ++i) {
+                        sprintf(out + i, "%x", 0x0);
                 }
         } else if (check_instruction(instruction, ".word")) {
                 /* Boot signature */
@@ -233,7 +239,7 @@ void parse_line(char *line, char *buffer)
 {
         trim_line(line);
 
-        char out[BOOT_SECTOR_SIZE] = {0};
+        char out[BOOT_SECTOR_SIZE_CHAR] = {0};
         pattern_match(line, out);
         if (!*out) {
                 return;
@@ -255,7 +261,7 @@ int main()
 
         FILE *output_file = fopen("output.bin", "wb");
         char line[MAX_LINE_LENGTH] = {0};
-        char buffer[BOOT_SECTOR_SIZE] = {0};
+        char buffer[BOOT_SECTOR_SIZE_CHAR] = {0};
 
         while (fgets(line, MAX_LINE_LENGTH, input_file) != NULL) {
                 parse_line(line, buffer);
