@@ -17,13 +17,13 @@
 char buffer[SIZE]; /* Read buffer.      */
 
 /* TODO
-* Implement a new built-in command.
-*
-* Think of a new command, such as to return the current date, print the
-* available RAM memory, draw some cool graphics using video memory...
-* or anything else you feel like.
-*
-*/
+ * Implement a new built-in command.
+ *
+ * Think of a new command, such as to return the current date, print the
+ * available RAM memory, draw some cool graphics using video memory...
+ * or anything else you feel like.
+ *
+ */
 int main()
 {
     clear();
@@ -34,12 +34,20 @@ int main()
         print(PROMPT);  /* Show prompt.               */
         readln(buffer); /* Read use input.            */
 
+        char * p = buffer;
+        for (; *p; ++p){
+            *p = to_lower(*p);
+        }
+
         if (buffer[0]) /* Execute built-in command.  */
         {
-            if (!strcmp(buffer, "help"))
+            if (!strcmp(buffer, "help")) {
                 println("A Beattles's song.");
-            else
+            } else if (!strcmp(buffer, "ram")) {
+                println("Available RAM is 42 MB");
+            } else {
                 println("Unkown command.");
+            }
         }
     }
 
