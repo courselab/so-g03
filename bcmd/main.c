@@ -26,18 +26,28 @@ int main()
   println  ("Boot Command 1.0");
 
   while (1)
-    {
-      print(PROMPT);		/* Show prompt.               */
-      readln(buffer);		/* Read use input.            */
-
-      if (buffer[0])		/* Execute built-in command.  */
 	{
-	  if (!strcmp(buffer,"help"))
-	    println("A Beattles's song.");
-	  else 
-	    println("Unkown command.");
+		print(PROMPT);		/* Show prompt.               */
+		readln(buffer);		/* Read use input.            */
+
+		if (buffer[0])		/* Execute built-in command.  */
+		{
+		  if (!strcmp(buffer,"help"))
+			println("A Beattles's song.");
+		
+		  else if (!strcmp(buffer,"clear"))
+			clear();
+		
+		  else if (!strcmp(buffer,"date"))
+			println("Get Date.");
+		
+		  else if (!strcmp(buffer,"exit"))
+			return 0;
+		
+		  else 
+			println("Unkown command.");
+		}
 	}
-    }
   
   return 0;
 
