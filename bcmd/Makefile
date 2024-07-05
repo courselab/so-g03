@@ -19,7 +19,7 @@
 
 all: bcmd.bin
 
-bcmd.bin : main.o bios.o utils.o 
+bcmd.bin : main.o bios.o opt.o 
 	ld -melf_i386 -T bcmd.ld --orphan-handling=discard $^ -o $@
 
 %.o : %.c

@@ -11,14 +11,9 @@
  *  Tiago Oliva <tiago.oliva.costa@gmail.com>
  */
 
-#ifndef BIOS_H
-#define BIOS_H
+#ifndef OPT_H
+#define OPT_H
 
-void __attribute__((fastcall)) clear (void);
-void __attribute__((fastcall)) print();
-void __attribute__((fastcall)) println();
-void __attribute__((fastcall)) readln(char *);
-void __attribute__((fastcall)) date();
-
+int __attribute__((fastcall)) strcmp(const char *s1, const char *s2);
 
 #endif

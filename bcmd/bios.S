@@ -12,7 +12,7 @@
 #
 
 	.code16
-	.global clear, print, readln, println, strcmp
+	.global clear, print, readln, println, strcmp, date
 	
 	.section .text
 
@@ -109,12 +109,36 @@ readln_end:
 	popa			/* Restore all GP registers.                  */
 	ret
 
-	## Read-only data
-	##
-	##
-	
-	.section .rodata
+date:
+    pusha             /* Save all GP registers. */
+    mov $0x2A, %ah    /* To get System Date */
+    int $0x21
+    mov %dl, %al      /* Day is in DL */
+    aam
+    add $0x3030, %ax  /* ASCII Adjustment */
+    mov %ax, date_buffer
+    movb $'/', date_buffer + 2 /* Insert '/' character */
+    mov %dh, %al      /* Month is in DH */
+    aam
+    add $0x3030, %ax  /* ASCII Adjustment */
+    mov %ax, date_buffer + 3
+    movb $'/', date_buffer + 5 /* Insert '/' character */
+    add $0xF830, %cx  /* To negate the effects of 16bit value, */
+                      /* since AAM is applicable only for AL (YYYY -> YY) */
+    mov %cx, %ax
+    aam
+    add $0x3030, %ax  /* ASCII Adjustment */
+    mov %ax, date_buffer + 6
+    mov $date_buffer, %cx
+    call print
+    popa              /* Restore all GP registers. */
+    ret
+
+/* Read-only data */
+.section .rodata
+
+date_buffer:
+    .ascii "dd/mm/yy\0"   /* Placeholder for date string. */
 
 crlf:
-	.byte 0xd, 0x0a, 0x0 	/* CR-FL seqquence.  */
-
+    .byte 0xd, 0x0a, 0x0  /* CR-FL sequence. */
