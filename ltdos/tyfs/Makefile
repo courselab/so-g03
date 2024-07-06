@@ -1,15 +1,11 @@
-#
 #    SPDX-FileCopyrightText: 2021 Monaco F. J. <monaco@usp.br>
-#    SPDX-FileCopyrightText: 2024 Luiz Antonio de Abreu Pereira <lap.junior@gmail.com>
 #    SPDX-FileCopyrightText: 2024 Tiago Oliva <tiago.oliva.costa@gmail.com>
 #   
 #    SPDX-License-Identifier: GPL-3.0-or-later
 #
 #  This file is a derivative work from SYSeg (https://gitlab.com/monaco/syseg)
 #  and contains modifications carried out by the following author(s):
-#  Luiz Antonio de Abreu Pereira <lap.junior@gmail.com>
 #  Tiago Oliva <tiago.oliva.costa@gmail.com>
-#
 
 ###########################################################
 ##
@@ -18,86 +14,26 @@
 
 
 
-# By default, the bootable program name will by $(dosname).bin
-# If you export this directory to extend the example as part of a programming
-# exercise, redefine $(dos) to reflect your own DOS name, say
-dos = "ltdos"
-
-# dos=$(shell basename $$(realpath .))
-
 # Build the OS and an example user program.
 
-all: $(dos).bin prog.bin disk.img install-dos
-
-# Link all objects needed by the OS.
-
-$(dos).bin : bootloader.o bios1.o kernel.o kaux.o bios2.o logo.o syscall.o 
-	ld -melf_i386 -T tydos.ld --orphan-handling=discard $^ -o $@
-
-# Here we are statically linking the user program 'prob.bin' into the kernel,
-# so as to simulate the execution of a user program. If we were to actually load
-# and execute an external program, we should remove 'prog.o' and 'libtydos.o'
-# from the list of pre-requisites, and edit the linker script accordingly.
-# Comment out the following line if this is the case.
-
-# $(dos).bin : prog.o libtydos.o 
-
-# Rules to build objects from either C or assembly code.
+all: tyfsedit
 
 %.o : %.c
-	gcc -m16 -O0 --freestanding -fno-pic -fcf-protection=none -c $(CFLAGS) $< -o $@
+	gcc -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
-%.o : %.S
-	as -32 $< -o $@
+tyfsedit : tyfsedit.o
+	gcc $< -lm -o $@
 
-bootloader.o : bios1.h kernel.h 
-kernel.o : bios1.h bios2.h kernel.h kaux.h   
-kaux.o:    bios2.h kaux.h   
+# Create a 1.44 MB floppy image (2880 * 512 bytes)
 
-$(dos).bin : .EXTRA_PREREQS = rt0.o tydos.ld
-
-# Rules to build the user programs
-# You would add new programs to this variable if bulding other user programs.
-# The user library is automatically added by the linker script.
-
-progs = prog.bin
-
-$(progs)  : %.bin : %.o libtydos.a 
-	ld -melf_i386 -T prog.ld --orphan-handling=discard $< -o $@
-
-$(progs:%.bin=%.o) : %.o : %.c tydos.h
-	gcc -m16 -O0 --freestanding -fno-pic -fcf-protection=none -c $(CFLAGS) $< -o $@
-
-$(progs:%.bin=%.o) : tydos.h
-
-$(progs:%.bin=%.o) : .EXTRA_PREREQS = prog.ld
-
-# Recipes to build the user library.
-
-libtydos.o: libtydos.c tydos.h
-	gcc -m16 -O0 --freestanding -fno-pic -fcf-protection=none -c $(CFLAGS) $< -o $@
-
-libtydos.o : tydos.h
-
-libtydos.a : libtydos.o
-	ar rcs $@ $^
-
-# Create a zeroed 1.44M floppy image and format it with tyFS
 disk.img:
-	dd if=/dev/zero of=disk.img bs=512 count=2880
-	./eg/tyfs/tyfsedit -f disk.img
-	./eg/tyfs/tyfsedit -c disk.img some_text_file.txt
+	rm -f $@
+	dd if=/dev/zero of=$@ count=2880
 
-# Write the DOS program into disk.img without overwriting the tyFS header
-install-dos: $(dos).bin disk.img
-	dd if=$(dos).bin of=disk.img bs=512 count=1 conv=notrunc
-
-# Housekeeping.
-
-.PHONY: clean
+.PHONY: clean img
 
 clean:
-	rm -f *.bin *.o *~ *.s *.a
+	rm -f *.o tyfsedit img
 
 
 ## Bintools: convenience rules for inspecting binary files
@@ -391,7 +327,7 @@ stick: $(IMG)
 
 
 
-EXPORT_FILES = Makefile README bootloader.c kernel.c kernel.h kaux.c kaux.h bios1.S bios1.h bios2.S bios2.h syscall.c tydos.ld  libtydos.c tydos.h tydos.h prog.c prog.ld rt0.S  logo.c
+EXPORT_FILES = Makefile README tyfsedit.c debug.h
 EXPORT_NEW_FILES = NOTEBOOK
 
 
@@ -400,7 +336,7 @@ EXPORT_NEW_FILES = NOTEBOOK
 ## They are used by SYSeg to create a self-contained distribution bundle
 ## of the source directory, suitable for exporting project files.
 
-TARNAME=$(dos)
+TARNAME=tyfs
 
 
 syseg-export export:
