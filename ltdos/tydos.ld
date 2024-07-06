@@ -49,11 +49,12 @@ SECTIONS
 	   entirely from this linker script (and update the Makefile 
 	   accordingly).*/	
 
-	.prog_example :		
-	{
-	  prog.o      (.text .data .bss. .rodata)
-	  libtydos.o  (.text .data .bss. .rodata)
-	}
+	/* .prog_example :		
+	 * {
+	 *   prog.o      (.text .data .bss. .rodata)
+	 *   libtydos.o  (.text .data .bss. .rodata)
+	 * }
+	 */
 
 	_KERNEL_SIZE = . - _KERNEL_ADDR; /* How many bytes we'll read.      */
 

@@ -21,9 +21,9 @@
 # By default, the bootable program name will by $(dosname).bin
 # If you export this directory to extend the example as part of a programming
 # exercise, redefine $(dos) to reflect your own DOS name, say
-# dos = "amazingOS" 
+dos = "ltdos" 
 
-dos=$(shell basename $$(realpath .))
+# dos=$(shell basename $$(realpath .))
 
 # Build the OS and an example user program.
 
@@ -40,7 +40,7 @@ $(dos).bin : bootloader.o bios1.o kernel.o kaux.o bios2.o logo.o syscall.o
 # from the list of pre-requisites, and edit the linker script accordingly.
 # Comment out the following line if this is the case.
 
-$(dos).bin : prog.o libtydos.o 
+# $(dos).bin : prog.o libtydos.o 
 
 # Rules to build objects from either C or assembly code.
 
