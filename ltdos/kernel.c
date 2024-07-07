@@ -40,16 +40,17 @@ struct fs_header_t {
 
 /* Kernel's entry function. */
 
-void kmain(void) {
-  int i, j;
+void kmain(void)
+{
+    int i, j;
 
-  register_syscall_handler(); /* Register syscall handler at int 0x21.*/
+    register_syscall_handler(); /* Register syscall handler at int 0x21.*/
 
-  splash(); /* Uncessary spash screen.              */
+    splash(); /* Uncessary spash screen.              */
 
-  shell(); /* Invoke the command-line interpreter. */
+    shell(); /* Invoke the command-line interpreter. */
 
-  halt(); /* On exit, halt.                       */
+    halt(); /* On exit, halt.                       */
 }
 
 /* Tiny Shell (command-line interpreter). */
@@ -57,40 +58,41 @@ void kmain(void) {
 char buffer[BUFF_SIZE];
 int go_on = 1;
 
-void shell() {
-  int i;
-  clear();
-  kwrite("TinyDOS 1.0\n");
+void shell()
+{
+    int i;
+    clear();
+    kwrite("TinyDOS 1.0\n");
 
-  while (go_on) {
+    while (go_on) {
 
-    /* Read the user input.
-     Commands are single-word ASCII tokens with no blanks. */
-    do {
-      kwrite(PROMPT);
-      kread(buffer);
-    } while (!buffer[0]);
+        /* Read the user input.
+         Commands are single-word ASCII tokens with no blanks. */
+        do {
+            kwrite(PROMPT);
+            kread(buffer);
+        } while (!buffer[0]);
 
-    /* Check for matching built-in commands */
+        /* Check for matching built-in commands */
 
-    i = 0;
-    while (cmds[i].funct) {
-      if (!strcmp(buffer, cmds[i].name)) {
-        cmds[i].funct();
-        break;
-      }
-      i++;
+        i = 0;
+        while (cmds[i].funct) {
+            if (!strcmp(buffer, cmds[i].name)) {
+                cmds[i].funct();
+                break;
+            }
+            i++;
+        }
+
+        /* If the user input does not match any built-in command name, just
+           ignore and read the next command. If we were to execute external
+           programs, on the other hand, this is where we would search for a
+           corresponding file with a matching name in the storage device,
+           load it and transfer it the execution. Left as exercise. */
+
+        if (!cmds[i].funct)
+            kwrite("Command not found\n");
     }
-
-    /* If the user input does not match any built-in command name, just
-       ignore and read the next command. If we were to execute external
-       programs, on the other hand, this is where we would search for a
-       corresponding file with a matching name in the storage device,
-       load it and transfer it the execution. Left as exercise. */
-
-    if (!cmds[i].funct)
-      kwrite("Command not found\n");
-  }
 }
 
 /* Array with built-in command names and respective function pointers.
@@ -105,16 +107,18 @@ struct cmd_t cmds[] = {{"help", f_help}, /* Print a help message.       */
 
 /* Build-in shell command: help. */
 
-void f_help() {
-  kwrite("...me, Obi-Wan, you're my only hope!\n\n");
-  kwrite("   But we can try also some commands:\n");
-  kwrite("      exec    (to execute an user program example\n");
-  kwrite("      quit    (to exit TyDOS)\n");
+void f_help()
+{
+    kwrite("...me, Obi-Wan, you're my only hope!\n\n");
+    kwrite("   But we can try also some commands:\n");
+    kwrite("      exec    (to execute an user program example\n");
+    kwrite("      quit    (to exit TyDOS)\n");
 }
 
-void f_quit() {
-  kwrite("Program halted. Bye.");
-  go_on = 0;
+void f_quit()
+{
+    kwrite("Program halted. Bye.");
+    go_on = 0;
 }
 
 /* Built-in shell command: example.
@@ -134,36 +138,37 @@ void f_quit() {
 char *volume_name = NULL; /* Name of the current file. */
 FILE *volume_fp = NULL;   /* Pointer to the open file. */
 
-int volume_is_open();                  /* Check if volume is open.          */
-int volume_is_fs_header();             /* Check if volume has a TyFS heder. */
+int volume_is_open();      /* Check if volume is open.          */
+int volume_is_fs_header(); /* Check if volume has a TyFS heder. */
 
 /* List files in the volume.
  * Arguments: (none)
  */
-int f_list(int argc, const char **argv) {
-  int i;
-  char name[DIR_ENTRY_LEN];
+int f_list(int argc, const char **argv)
+{
+    int i;
+    char name[DIR_ENTRY_LEN];
 
-  /* Check preconditions. */
+    /* Check preconditions. */
 
-  if (!volume_is_open() || !volume_is_fs_header())
-    return 1;
+    if (!volume_is_open() || !volume_is_fs_header())
+        return 1;
 
-  /* Position at the begining of the directory region. */
+    /* Position at the begining of the directory region. */
 
-  fseek(volume_fp, fs_header.number_of_boot_sectors * 512, SEEK_SET);
+    fseek(volume_fp, fs_header.number_of_boot_sectors * 512, SEEK_SET);
 
-  /* Read all entries. */
+    /* Read all entries. */
 
-  for (i = 0; i < fs_header.number_of_file_entries; i++) {
-    fread(name, DIR_ENTRY_LEN, 1, volume_fp);
-    if (name[0]) {
-      fwrite(name, DIR_ENTRY_LEN, 1, stdout);
-      printf("\n");
+    for (i = 0; i < fs_header.number_of_file_entries; i++) {
+        fread(name, DIR_ENTRY_LEN, 1, volume_fp);
+        if (name[0]) {
+            fwrite(name, DIR_ENTRY_LEN, 1, stdout);
+            printf("\n");
+        }
     }
-  }
 
-  return 0;
+    return 0;
 }
 
 extern int main();
