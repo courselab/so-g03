@@ -84,13 +84,16 @@ libtydos.a : libtydos.o
 
 # Create a zeroed 1.44M floppy image and format it with tyFS
 disk.img:
-	dd if=/dev/zero of=disk.img bs=512 count=2880
+	rm -f $@
+	dd if=/dev/zero of=$@ count=2880
 	./eg/tyfs/tyfsedit -f disk.img
-	./eg/tyfs/tyfsedit -c disk.img some_text_file.txt
 
 # Write the DOS program into disk.img without overwriting the tyFS header
-install-dos: $(dos).bin disk.img
-	dd if=$(dos).bin of=disk.img bs=512 count=1 conv=notrunc
+# install-dos: $(dos).bin disk.img
+# 	dd if=$(dos).bin of=disk.img bs=512 count=1 conv=notrunc
+
+install-dos: $(dos).bin
+	dd bs=1 if=$< of=disk.img iseek=16 oseek=16 conv=notrunc
 
 # Housekeeping.
 

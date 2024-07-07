@@ -36,6 +36,7 @@ void f_help();
 void f_exec();
 #endif
 void f_quit();
+void f_list();
 
 extern struct cmd_t {
     char name[32];

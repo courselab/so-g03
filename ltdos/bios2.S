@@ -19,7 +19,7 @@
            by the bootloader (so as to respect the 512-byte length limit).*/
 	
 	.code16gcc
-	.global kread, udelay, register_syscall_handler, sys_write
+	.global kread, udelay, register_syscall_handler, sys_write, load_disk
 	
 	.section .text
 
@@ -138,7 +138,45 @@ msg_err_read:
 	.string "Drive read error\n"
 	
 	
-     /* Notes.
+load_disk:
+    /* Save the caller-saved registers */
+    pushl %ebx
+    pushl %ecx
+    pushl %edx
+
+    /* Select the boot drive (from rt0.o) */
+    movb $0x00, %dl
+
+    /* BIOS disk service: op. read sector */
+    movb $0x02, %ah
+
+    /* How many sectors to read */
+    movb $0x01, %al
+
+    /* Cylinder coordinate (starts at 0) */
+    xorl %ecx, %ecx
+
+    /* Sector coordinate (starts at 1) */
+    incb %cl
+
+    /* Head coordinate (starts at 0) */
+    xorb %dh, %dh
+
+    /* Where to load the file system (rt0.o) */
+    movl $0x7C00, %ebx
+
+    /* Call BIOS disk service 0x13 */
+    int $0x13
+
+    /* Restore the caller-saved registers */
+    popl %edx
+    popl %ecx
+    popl %ebx
+
+    /* Return */
+    ret
+
+/* Notes.
 	
     (1) When coding in assembly for 16-bit, the directive .code16 instructs
 	the assembly to generate 16-bit object code. Symbol addresses are 

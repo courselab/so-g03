@@ -17,5 +17,6 @@
 int __attribute__((fastcall)) kread(char *);
 
 void __attribute__((fastcall)) udelay(unsigned short);
+void __attribute__((fastcall)) load_disk();
 
 #endif  /* BIOS2_H  */

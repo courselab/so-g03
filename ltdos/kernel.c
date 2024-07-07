@@ -20,15 +20,13 @@
 #include "bios1.h"  /* For kwrite() etc.            */
 #include "bios2.h"  /* For kread() etc.             */
 #include "kaux.h"   /* Auxiliary kernel functions.  */
-#include <stdio.h>
 
-#define DIR_ENTRY_LEN 32 /* Max file name length in bytes.           */
-
-#define FS_SIGNATURE "\xeb\xety" /* File system signature.                   */
-#define FS_SIGLEN 4              /* Signature length.                        */
+#define DIR_ENTRY_LEN 32  /* Max file name length in bytes.           */
+#define SECTOR_SIZE 512
+#define BOOT_START 0x7c00
+#define FS_SIGLEN 4       /* Signature length.                        */
 
 /* The file header. */
-
 struct fs_header_t {
     unsigned char signature[FS_SIGLEN];     /* The file system signature.              */
     unsigned short total_number_of_sectors; /* Number of 512-byte disk blocks.         */
@@ -36,7 +34,7 @@ struct fs_header_t {
     unsigned short number_of_file_entries;  /* Maximum number of files in the disk.    */
     unsigned short max_file_size;           /* Maximum size of a file in blocks.       */
     unsigned int unused_space;              /* Remaining space less than max_file_size.*/
-} __attribute__((packed)) fs_header;        /* Disable alignment to preserve offsets.  */
+} __attribute__((packed));                  /* Disable alignment to preserve offsets.  */
 
 /* Kernel's entry function. */
 
@@ -103,6 +101,7 @@ struct cmd_t cmds[] = {{"help", f_help}, /* Print a help message.       */
 #if 0
                        {"exec", f_exec}, /* Execute an example program. */
 #endif
+                       {"list", f_list}, /* List files */
                        {0, 0}};
 
 /* Build-in shell command: help. */
@@ -112,6 +111,7 @@ void f_help()
     kwrite("...me, Obi-Wan, you're my only hope!\n\n");
     kwrite("   But we can try also some commands:\n");
     kwrite("      exec    (to execute an user program example\n");
+    kwrite("      list    (to list all files present in disk\n");
     kwrite("      quit    (to exit TyDOS)\n");
 }
 
@@ -135,40 +135,30 @@ void f_quit()
 
   */
 
-char *volume_name = NULL; /* Name of the current file. */
-FILE *volume_fp = NULL;   /* Pointer to the open file. */
-
-int volume_is_open();      /* Check if volume is open.          */
-int volume_is_fs_header(); /* Check if volume has a TyFS heder. */
-
 /* List files in the volume.
  * Arguments: (none)
  */
-int f_list(int argc, const char **argv)
+void f_list()
 {
     int i;
     char name[DIR_ENTRY_LEN];
 
-    /* Check preconditions. */
-
-    if (!volume_is_open() || !volume_is_fs_header())
-        return 1;
+    struct fs_header_t *header = (struct fs_header_t *)BOOT_START;
 
     /* Position at the begining of the directory region. */
+    unsigned short sector_start = header->number_of_boot_sectors * SECTOR_SIZE;
 
-    fseek(volume_fp, fs_header.number_of_boot_sectors * 512, SEEK_SET);
+    extern unsigned char _END;
+    void *p_section = (void *)&_END;
 
     /* Read all entries. */
-
-    for (i = 0; i < fs_header.number_of_file_entries; i++) {
-        fread(name, DIR_ENTRY_LEN, 1, volume_fp);
+    for (i = 0; i < header->number_of_file_entries; i++) {
+        char *name = p_section + DIR_ENTRY_LEN * i;
         if (name[0]) {
-            fwrite(name, DIR_ENTRY_LEN, 1, stdout);
-            printf("\n");
+            kwrite(name);
+            kwrite("\n");
         }
     }
-
-    return 0;
 }
 
 extern int main();
