@@ -2,7 +2,7 @@
 #    SPDX-FileCopyrightText: 2021 Monaco F. J. <monaco@usp.br>
 #    SPDX-FileCopyrightText: 2024 Luiz Antonio de Abreu Pereira <lap.junior@gmail.com>
 #    SPDX-FileCopyrightText: 2024 Tiago Oliva <tiago.oliva.costa@gmail.com>
-#   
+#
 #    SPDX-License-Identifier: GPL-3.0-or-later
 #
 #  This file is a derivative work from SYSeg (https://gitlab.com/monaco/syseg)
@@ -111,25 +111,32 @@ readln_end:
 
 date:
     pusha             /* Save all GP registers. */
-    mov $0x2A, %ah    /* To get System Date */
-    int $0x21
+    mov $0x04, %ah    /* To get System Date */
+    int $0x1A
+
     mov %dl, %al      /* Day is in DL */
     aam
     add $0x3030, %ax  /* ASCII Adjustment */
+
     mov %ax, date_buffer
     movb $'/', date_buffer + 2 /* Insert '/' character */
+
     mov %dh, %al      /* Month is in DH */
     aam
     add $0x3030, %ax  /* ASCII Adjustment */
+
     mov %ax, date_buffer + 3
     movb $'/', date_buffer + 5 /* Insert '/' character */
     add $0xF830, %cx  /* To negate the effects of 16bit value, */
                       /* since AAM is applicable only for AL (YYYY -> YY) */
+
     mov %cx, %ax
     aam
     add $0x3030, %ax  /* ASCII Adjustment */
+
     mov %ax, date_buffer + 6
     mov $date_buffer, %cx
+
     call print
     popa              /* Restore all GP registers. */
     ret
