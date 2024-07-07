@@ -20,8 +20,23 @@
 #include "bios1.h"  /* For kwrite() etc.            */
 #include "bios2.h"  /* For kread() etc.             */
 #include "kaux.h"   /* Auxiliary kernel functions.  */
+#include <stdio.h>
 
 #define DIR_ENTRY_LEN 32 /* Max file name length in bytes.           */
+
+#define FS_SIGNATURE "\xeb\xety" /* File system signature.                   */
+#define FS_SIGLEN 4              /* Signature length.                        */
+
+/* The file header. */
+
+struct fs_header_t {
+    unsigned char signature[FS_SIGLEN];     /* The file system signature.              */
+    unsigned short total_number_of_sectors; /* Number of 512-byte disk blocks.         */
+    unsigned short number_of_boot_sectors;  /* Sectors reserved for boot code.         */
+    unsigned short number_of_file_entries;  /* Maximum number of files in the disk.    */
+    unsigned short max_file_size;           /* Maximum size of a file in blocks.       */
+    unsigned int unused_space;              /* Remaining space less than max_file_size.*/
+} __attribute__((packed)) fs_header;        /* Disable alignment to preserve offsets.  */
 
 /* Kernel's entry function. */
 
@@ -116,10 +131,15 @@ void f_quit() {
 
   */
 
+char *volume_name = NULL; /* Name of the current file. */
+FILE *volume_fp = NULL;   /* Pointer to the open file. */
+
+int volume_is_open();                  /* Check if volume is open.          */
+int volume_is_fs_header();             /* Check if volume has a TyFS heder. */
+
 /* List files in the volume.
  * Arguments: (none)
  */
-
 int f_list(int argc, const char **argv) {
   int i;
   char name[DIR_ENTRY_LEN];
