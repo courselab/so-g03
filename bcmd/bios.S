@@ -129,12 +129,11 @@ date:
 
     mov %ax, date_buffer + 3
     movb $'/', date_buffer + 5 /* Insert '/' character */
-    add $0xF830, %cx  /* To negate the effects of 16bit value, */
-                      /* since AAM is applicable only for AL (YYYY -> YY) */
 
     mov %cx, %ax
     aam
-    add $0x3030, %ax  /* ASCII Adjustment */
+    add $0x2F2e, %ax  /* ASCII Adjustment */
+	rol $8, %ax  /* Invert digit */
 
     mov %ax, date_buffer + 6
     mov $date_buffer, %cx
