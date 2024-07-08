@@ -21,19 +21,19 @@
 	## Clear the screen.
 	
 clear:
-#	pusha			/* Save all GP registers.              */
-#	mov $0x0600, %ax	/* Video service: scroll up.           */
-#	mov $0x07, %bh		/* Attribute (background/foreground).  */
-#	mov $0x00, %cx		/* Upper-left corner:   (0,0).         */
-#	mov $0x184f, %dx	/* Botton-right corner: (24,79).       */
-#	int $0x10		/* Call BIOS video service.            */
-#
-#	mov $0x2, %ah		/* Video service: set cursor position. */
-#	mov $0x0, %bh		/* Select page number 0.               */
-#	mov $0x0, %dx		/* Set position (0,0).                 */
-#	int $0x10		/* Call BIOS video service.            */
-#	
-#	popa			/* Restore all GP-registers.           */
+	pusha			/* Save all GP registers.              */
+	mov $0x0600, %ax	/* Video service: scroll up.           */
+	mov $0x07, %bh		/* Attribute (background/foreground).  */
+	mov $0x00, %cx		/* Upper-left corner:   (0,0).         */
+	mov $0x184f, %dx	/* Botton-right corner: (24,79).       */
+	int $0x10		/* Call BIOS video service.            */
+
+	mov $0x2, %ah		/* Video service: set cursor position. */
+	mov $0x0, %bh		/* Select page number 0.               */
+	mov $0x0, %dx		/* Set position (0,0).                 */
+	int $0x10		/* Call BIOS video service.            */
+	
+	popa			/* Restore all GP-registers.           */
 	ret
 
 	## void print(const char* msg)
@@ -110,7 +110,7 @@ readln_end:
 	ret
 
 date:
-    pusha             /* Save all GP registers. */
+#    pusha             /* Save all GP registers. */
     mov $0x04, %ah    /* To get System Date */
     int $0x1A
 	
@@ -135,13 +135,13 @@ date:
     mov $date_buffer, %cx
 
     call println
-    popa              /* Restore all GP registers. */
+#    popa              /* Restore all GP registers. */
     ret
 	
 	
 # Converts a byte in AL to two ASCII characters in BX
 convert_to_ascii:
-    push    %ax              # Save original AX
+#    push    %ax              # Save original AX
     mov     %al, %ah         # Move the high nibble to AH
     and     $0x0F, %ah       # Mask the high nibble
     shr     $4, %al          # Shift right to get the high nibble in AL
@@ -163,7 +163,7 @@ convert_to_ascii:
     add     $0x30, %ah       # Convert to ASCII
     mov     %ah, %bh         # Move low ASCII character to BH
 
-    pop     %ax              # Restore original AX
+#    pop     %ax              # Restore original AX
     ret                      # Return	
 	
 
