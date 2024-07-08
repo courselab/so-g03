@@ -12,7 +12,7 @@
 #
 
 	.code16
-	.global clear, print, readln, println, strcmp, date
+	.global clear, print, readln, println, strcmp, date, convert_to_ascii
 	
 	.section .text
 
@@ -21,19 +21,19 @@
 	## Clear the screen.
 	
 clear:
-	pusha			/* Save all GP registers.              */
-	mov $0x0600, %ax	/* Video service: scroll up.           */
-	mov $0x07, %bh		/* Attribute (background/foreground).  */
-	mov $0x00, %cx		/* Upper-left corner:   (0,0).         */
-	mov $0x184f, %dx	/* Botton-right corner: (24,79).       */
-	int $0x10		/* Call BIOS video service.            */
-
-	mov $0x2, %ah		/* Video service: set cursor position. */
-	mov $0x0, %bh		/* Select page number 0.               */
-	mov $0x0, %dx		/* Set position (0,0).                 */
-	int $0x10		/* Call BIOS video service.            */
-	
-	popa			/* Restore all GP-registers.           */
+#	pusha			/* Save all GP registers.              */
+#	mov $0x0600, %ax	/* Video service: scroll up.           */
+#	mov $0x07, %bh		/* Attribute (background/foreground).  */
+#	mov $0x00, %cx		/* Upper-left corner:   (0,0).         */
+#	mov $0x184f, %dx	/* Botton-right corner: (24,79).       */
+#	int $0x10		/* Call BIOS video service.            */
+#
+#	mov $0x2, %ah		/* Video service: set cursor position. */
+#	mov $0x0, %bh		/* Select page number 0.               */
+#	mov $0x0, %dx		/* Set position (0,0).                 */
+#	int $0x10		/* Call BIOS video service.            */
+#	
+#	popa			/* Restore all GP-registers.           */
 	ret
 
 	## void print(const char* msg)
@@ -113,34 +113,59 @@ date:
     pusha             /* Save all GP registers. */
     mov $0x04, %ah    /* To get System Date */
     int $0x1A
-
-    mov %dl, %al      /* Day is in DL */
-    aam
-    add $0x3030, %ax  /* ASCII Adjustment */
-	rol $8, %ax  /* Invert digit */
-
-    mov %ax, date_buffer
-    movb $'/', date_buffer + 2 /* Insert '/' character */
-
-    mov %dh, %al      /* Month is in DH */
-    aam
-    add $0x3030, %ax  /* ASCII Adjustment */
-	rol $8, %ax	 /* Invert digit */
-
-    mov %ax, date_buffer + 3
+	
+	# do year
+	movb    %cl, %al
+    call    convert_to_ascii	
+	mov %bx, date_buffer + 6
+	
+	# do day
+	movb    %dl, %al
+	call    convert_to_ascii
+	mov %bx, date_buffer
+    movb $'/', date_buffer + 2 /* Insert '/' character */	
+	
+	# do month
+    movb    %dh, %al
+    call    convert_to_ascii
+    mov %bx, date_buffer + 3
     movb $'/', date_buffer + 5 /* Insert '/' character */
+	
 
-    mov %cx, %ax
-    aam
-    add $0x2F2e, %ax  /* ASCII Adjustment */
-	rol $8, %ax  /* Invert digit */
-
-    mov %ax, date_buffer + 6
     mov $date_buffer, %cx
 
     call println
     popa              /* Restore all GP registers. */
     ret
+	
+	
+# Converts a byte in AL to two ASCII characters in BX
+convert_to_ascii:
+    push    %ax              # Save original AX
+    mov     %al, %ah         # Move the high nibble to AH
+    and     $0x0F, %ah       # Mask the high nibble
+    shr     $4, %al          # Shift right to get the high nibble in AL
+    and     $0x0F, %al       # Mask the low nibble
+
+    # Convert high nibble to ASCII
+    cmp     $0x09, %al       # Compare with 9
+    jbe     .high_is_digit   # If <= 9, it's a digit
+    add     $0x07, %al       # Else, it's a letter (A-F)
+.high_is_digit:
+    add     $0x30, %al       # Convert to ASCII
+    mov     %al, %bl         # Move high ASCII character to BL
+
+    # Convert low nibble to ASCII
+    cmp     $0x09, %ah       # Compare with 9
+    jbe     .low_is_digit    # If <= 9, it's a digit
+    add     $0x07, %ah       # Else, it's a letter (A-F)
+.low_is_digit:
+    add     $0x30, %ah       # Convert to ASCII
+    mov     %ah, %bh         # Move low ASCII character to BH
+
+    pop     %ax              # Restore original AX
+    ret                      # Return	
+	
 
 /* Read-only data */
 .section .rodata
