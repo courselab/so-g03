@@ -27,7 +27,7 @@ dos = "ltdos"
 
 # Build the OS and an example user program.
 
-all: $(dos).bin prog.bin install-dos
+all: $(dos).bin prog.bin
 
 # Link all objects needed by the OS.
 
@@ -85,7 +85,7 @@ libtydos.a : libtydos.o
 # Create a zeroed 1.44M floppy image, format it with tyFS, and copy sonnets into it
 disk.img:
 	rm -f $@
-	dd if=/dev/zero of=$@ bs=512 count=2880
+	dd if=/dev/zero of=$@ count=2880
 
 # Write the DOS program into disk.img without overwriting the tyFS header
 # install-dos: $(dos).bin disk.img
