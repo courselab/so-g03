@@ -13,4 +13,13 @@
 
 #include "tydos.h"
 
-void main() { puts("Hello World from LTDOS!"); }
+char name[50];
+
+void main()
+{
+    puts("What's your name?");
+    gets(name);
+    puts("Hello ");
+    puts(name);
+    puts(", from LTDOS!");
+}

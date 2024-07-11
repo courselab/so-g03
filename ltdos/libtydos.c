@@ -42,3 +42,4 @@ int syscall(int number, int arg1, int arg2, int arg3)
 /*  Write the string 'str' on the screen.*/
 
 void puts(const char *str) { syscall(SYS_WRITE, (int)str, 0, 0); }
+void gets(const char *str) { syscall(SYS_GETS, (int)str, 0, 0); }

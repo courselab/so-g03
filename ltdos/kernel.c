@@ -160,14 +160,13 @@ void f_list()
     struct fs_header_t *header = (struct fs_header_t *)BOOT_START;
 
     /* Position at the begining of the directory region. */
-    unsigned short sector_start = header->number_of_boot_sectors * SECTOR_SIZE;
-    int sector_coordinate = 1 + header->number_of_file_entries;
+    unsigned short sector_start = header->number_of_boot_sectors + 1;
     int readSectors = header->number_of_file_entries * DIR_ENTRY_LEN / SECTOR_SIZE;
 
     extern unsigned char _END;
     void *p_section = (void *)&_END;
 
-    loadDisk(sector_coordinate, readSectors, p_section);
+    loadDisk(sector_start, readSectors, p_section);
     /* Read all entries. */
     for (i = 0; i < header->number_of_file_entries; i++) {
         char *name = p_section + DIR_ENTRY_LEN * i;
@@ -179,7 +178,9 @@ void f_list()
 }
 
 extern int main();
-#if 0
-  void f_exec() { main();
-  /* Call the user program's 'main' function. */ }
-#endif
+void f_exec() {
+    /*
+     * TODO: ADD CODE TO EXECUTE HELLO.BIN 
+     *
+     */
+}
