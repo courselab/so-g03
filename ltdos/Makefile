@@ -60,7 +60,7 @@ $(dos).bin : .EXTRA_PREREQS = rt0.o tydos.ld
 # You would add new programs to this variable if bulding other user programs.
 # The user library is automatically added by the linker script.
 
-progs = prog.bin
+progs = prog.bin hello.bin
 
 $(progs)  : %.bin : %.o libtydos.a 
 	ld -melf_i386 -T prog.ld --orphan-handling=discard $< -o $@
@@ -87,9 +87,18 @@ disk.img:
 	rm -f $@
 	dd if=/dev/zero of=$@ count=2880
 
-# Write the DOS program into disk.img without overwriting the tyFS header
-# install-dos: $(dos).bin disk.img
-# 	dd if=$(dos).bin of=disk.img bs=512 count=1 conv=notrunc
+tyfsedit:
+	$(MAKE) tyfs
+
+
+disk.img: hello.bin $(progs) $(dos).bin tyfsedit
+	rm -f $@
+	# Create a zeroed 1.44M floppy image, format it with tyFS, and copy sonnets into it
+	dd if=/dev/zero of=$@ count=2880
+	# Edit with tyfsedit to copy some files
+	./tyfs/tyfsedit < tyfsedit.cmd
+	# Write the DOS program into disk.img without overwriting the tyFS header
+	dd bs=1 if=$(dos).bin of=disk.img skip=16 seek=16 conv=notrunc
 
 install-dos: $(dos).bin
 	dd bs=1 if=$< of=disk.img iseek=16 oseek=16 conv=notrunc
@@ -99,7 +108,7 @@ install-dos: $(dos).bin
 .PHONY: clean
 
 clean:
-	rm -f *.bin *.o *~ *.s *.a
+	rm -f *.bin *.o *~ *.s *.a *.img
 
 
 ## Bintools: convenience rules for inspecting binary files

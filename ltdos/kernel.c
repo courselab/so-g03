@@ -1,8 +1,7 @@
 /*
- *    SPDX-FileCopyrightText: 2024 Luiz Antonio de Abreu Pereira
- * <lap.junior@gmail.com> SPDX-FileCopyrightText: 2024 Tiago Oliva
- * <tiago.oliva.costa@gmail.com> SPDX-FileCopyrightText: 2024 Monaco F. J.
- * <monaco@usp.br>
+ *    SPDX-FileCopyrightText: 2024 Luiz Antonio de Abreu Pereira <lap.junior@gmail.com>
+ *    SPDX-FileCopyrightText: 2024 Tiago Oliva <tiago.oliva.costa@gmail.com>
+ *    SPDX-FileCopyrightText: 2024 Monaco F. J. <monaco@usp.br>
  *
  *    SPDX-License-Identifier: GPL-3.0-or-later
  *
@@ -21,10 +20,10 @@
 #include "bios2.h"  /* For kread() etc.             */
 #include "kaux.h"   /* Auxiliary kernel functions.  */
 
-#define DIR_ENTRY_LEN 32  /* Max file name length in bytes.           */
+#define DIR_ENTRY_LEN 32 /* Max file name length in bytes.           */
 #define SECTOR_SIZE 512
 #define BOOT_START 0x7c00
-#define FS_SIGLEN 4       /* Signature length.                        */
+#define FS_SIGLEN 4 /* Signature length.                        */
 
 /* The file header. */
 struct fs_header_t {
@@ -135,6 +134,21 @@ void f_quit()
 
   */
 
+void loadDisk(int sector_coordinate, int readSectors, void *target_addres)
+{
+    __asm__ volatile("pusha \n"
+                     "mov boot_drive, %%dl \n"    /* Select the boot drive (from rt0.o). */
+                     "mov $0x2, %%ah \n"          /* BIOS disk service: op. read sector. */
+                     "mov %[sectToRead], %%al \n" /* How many sectors to read          */
+                     "mov $0x0, %%ch \n"          /* Cylinder coordinate (starts at 0).  */
+                     "mov %[sectCoord], %%cl \n"  /* Sector coordinate   (starts at 1).  */
+                     "mov $0x0, %%dh \n"          /* Head coordinate     (starts at 0).      */
+                     "mov %[targetAddr], %%bx \n" /* Where to load the file system (rt0.o).   */
+                     "int $0x13 \n"               /* Call BIOS disk service 0x13.        */
+                     "popa \n" ::[sectCoord] "g"(sector_coordinate),
+                     [sectToRead] "g"(readSectors), [targetAddr] "g"(target_addres));
+}
+
 /* List files in the volume.
  * Arguments: (none)
  */
@@ -147,10 +161,13 @@ void f_list()
 
     /* Position at the begining of the directory region. */
     unsigned short sector_start = header->number_of_boot_sectors * SECTOR_SIZE;
+    int sector_coordinate = 1 + header->number_of_file_entries;
+    int readSectors = header->number_of_file_entries * DIR_ENTRY_LEN / SECTOR_SIZE;
 
     extern unsigned char _END;
     void *p_section = (void *)&_END;
 
+    loadDisk(sector_coordinate, readSectors, p_section);
     /* Read all entries. */
     for (i = 0; i < header->number_of_file_entries; i++) {
         char *name = p_section + DIR_ENTRY_LEN * i;
