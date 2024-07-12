@@ -15,11 +15,13 @@
 
 char name[50];
 
-void main()
+int main()
 {
     puts("What's your name?");
-    // gets(name);
-    // puts("Hello ");
-    // puts(name);
-    // puts(", from LTDOS!");
+    gets(name);
+    puts("Hello ");
+    puts(name);
+    puts(", from LTDOS!");
+
+    return 0;
 }

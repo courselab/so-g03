@@ -23,6 +23,7 @@
 #define DIR_ENTRY_LEN 32 /* Max file name length in bytes.           */
 #define SECTOR_SIZE 512
 #define BOOT_START 0x7c00
+#define PROGRAM_ADDRESS 0xFE00
 #define FS_SIGLEN 4 /* Signature length.                        */
 
 /* The file header. */
@@ -43,7 +44,7 @@ void kmain(void)
 
     register_syscall_handler(); /* Register syscall handler at int 0x21.*/
 
-//    splash(); /* Uncessary spash screen.              */
+    splash(); /* Uncessary spash screen.              */
 
     shell(); /* Invoke the command-line interpreter. */
 
@@ -132,21 +133,6 @@ void f_quit()
 
   */
 
-void load_disk2(int sector_coordinate, int readSectors, void *target_addres)
-{
-    __asm__ volatile("pusha \n"
-                     "mov boot_drive, %%dl \n"    /* Select the boot drive (from rt0.o). */
-                     "mov $0x2, %%ah \n"          /* BIOS disk service: op. read sector. */
-                     "mov %[sectToRead], %%al \n" /* How many sectors to read          */
-                     "mov $0x0, %%ch \n"          /* Cylinder coordinate (starts at 0).  */
-                     "mov %[sectCoord], %%cl \n"  /* Sector coordinate   (starts at 1).  */
-                     "mov $0x0, %%dh \n"          /* Head coordinate     (starts at 0).      */
-                     "mov %[targetAddr], %%bx \n" /* Where to load the file system (rt0.o).   */
-                     "int $0x13 \n"               /* Call BIOS disk service 0x13.        */
-                     "popa \n" ::[sectCoord] "g"(sector_coordinate),
-                     [sectToRead] "g"(readSectors), [targetAddr] "g"(target_addres));
-}
-
 /* Helper function to get header address.
  * Arguments: (none)
  */
@@ -171,7 +157,7 @@ void f_list()
     extern int _MEM_POOL;
     void *section_pointer = (void *)&_MEM_POOL;
 
-    load_disk2(start_sector, n_sectors, section_pointer);
+    load_disk(start_sector, n_sectors, section_pointer);
     /* Read all entries. */
     char *files = (char *)((char *)header + header->number_of_boot_sectors * SECTOR_SIZE);
     for (i = 0; i < 4; i++) {
@@ -184,7 +170,6 @@ void f_list()
     }
 }
 
-extern int main();
 void f_exec()
 {
     struct fs_header_t *header = get_fs_header();
@@ -197,7 +182,7 @@ void f_exec()
 
     void *section_pointer = (void *)(start_sector * SECTOR_SIZE);
 
-    load_disk2(start_sector, n_sectors, section_pointer);
+    load_disk(start_sector, n_sectors, section_pointer);
 
     int bin_sector_coord = -1;
     for (int i = 0; i < header->number_of_file_entries; i++) {
@@ -215,7 +200,7 @@ void f_exec()
     void *program = (void *)(0xFE00);
     void *program_sector_start = program - memoryOffset;
 
-    load_disk2(bin_sector_coord, header->max_file_size, program_sector_start);
+    load_disk(bin_sector_coord, header->max_file_size, program_sector_start);
 
     exec();
 }

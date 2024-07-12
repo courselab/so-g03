@@ -19,7 +19,7 @@
            by the bootloader (so as to respect the 512-byte length limit).*/
 	
 	.code16gcc
-	.global kread, udelay, register_syscall_handler, sys_write, load_disk, exec
+	.global kread, udelay, register_syscall_handler, sys_write, exec #, load_disk
 	
 	.section .text
 

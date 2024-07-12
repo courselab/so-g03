@@ -15,9 +15,7 @@
 #define BIOS2_H
 
 int __attribute__((fastcall)) kread(char *);
-
 void __attribute__((fastcall)) udelay(unsigned short);
-void __attribute__((fastcall)) load_disk(int sector_coordinate, int readSectors, void *target_addres);
 void __attribute__((fastcall)) exec();
 
 #endif  /* BIOS2_H  */

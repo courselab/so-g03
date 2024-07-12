@@ -34,6 +34,7 @@ all_run:
 	$(MAKE)
 	$(MAKE) disk.img
 	$(MAKE) disk.img/run
+
 # Link all objects needed by the OS.
 
 $(dos).bin : bootloader.o bios1.o kernel.o kaux.o bios2.o logo.o syscall.o 
@@ -90,7 +91,7 @@ libtydos.a : libtydos.o
 tyfsedit:
 	$(MAKE) tyfs
 
-disk.img: $(progs) $(dos).bin tyfsedit
+disk.img: hello.bin $(dos).bin tyfsedit
 	rm -f $@
 	# Create a zeroed 1.44M floppy image, format it with tyFS, and copy sonnets into it
 	dd if=/dev/zero of=$@ count=2880
