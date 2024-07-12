@@ -60,7 +60,7 @@ SECTIONS
 
 	_END_STACK = 0x7c00;	/* Place the stack bellow the program.      */
 
-	_END = . ;
+	_MEM_POOL = . ;
 }
 STARTUP(rt0.o)			 /* Prepend with the start file. */
 

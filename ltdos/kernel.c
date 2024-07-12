@@ -43,7 +43,7 @@ void kmain(void)
 
     register_syscall_handler(); /* Register syscall handler at int 0x21.*/
 
-    splash(); /* Uncessary spash screen.              */
+//    splash(); /* Uncessary spash screen.              */
 
     shell(); /* Invoke the command-line interpreter. */
 
@@ -97,9 +97,7 @@ void shell()
 
 struct cmd_t cmds[] = {{"help", f_help}, /* Print a help message.       */
                        {"quit", f_quit}, /* Exit TyDOS.                 */
-#if 0
                        {"exec", f_exec}, /* Execute an example program. */
-#endif
                        {"list", f_list}, /* List files */
                        {0, 0}};
 
@@ -134,7 +132,7 @@ void f_quit()
 
   */
 
-void loadDisk(int sector_coordinate, int readSectors, void *target_addres)
+void load_disk2(int sector_coordinate, int readSectors, void *target_addres)
 {
     __asm__ volatile("pusha \n"
                      "mov boot_drive, %%dl \n"    /* Select the boot drive (from rt0.o). */
@@ -149,6 +147,11 @@ void loadDisk(int sector_coordinate, int readSectors, void *target_addres)
                      [sectToRead] "g"(readSectors), [targetAddr] "g"(target_addres));
 }
 
+/* Helper function to get header address.
+ * Arguments: (none)
+ */
+struct fs_header_t *get_fs_header() { return (struct fs_header_t *)BOOT_START; }
+
 /* List files in the volume.
  * Arguments: (none)
  */
@@ -156,20 +159,24 @@ void f_list()
 {
     int i;
     char name[DIR_ENTRY_LEN];
+    char buffer[6];
 
-    struct fs_header_t *header = (struct fs_header_t *)BOOT_START;
+    struct fs_header_t *header = get_fs_header();
 
     /* Position at the begining of the directory region. */
-    unsigned short sector_start = header->number_of_boot_sectors + 1;
-    int readSectors = header->number_of_file_entries * DIR_ENTRY_LEN / SECTOR_SIZE;
+    unsigned int start_sector = header->number_of_boot_sectors + 1;
+    unsigned int n_sectors = header->number_of_file_entries * DIR_ENTRY_LEN / SECTOR_SIZE;
 
-    extern unsigned char _END;
-    void *p_section = (void *)&_END;
+    // void *section_pointer = (void *)(start_sector * SECTOR_SIZE);
+    extern int _MEM_POOL;
+    void *section_pointer = (void *)&_MEM_POOL;
 
-    loadDisk(sector_start, readSectors, p_section);
+    load_disk2(start_sector, n_sectors, section_pointer);
     /* Read all entries. */
-    for (i = 0; i < header->number_of_file_entries; i++) {
-        char *name = p_section + DIR_ENTRY_LEN * i;
+    char *files = (char *)((char *)header + header->number_of_boot_sectors * SECTOR_SIZE);
+    for (i = 0; i < 4; i++) {
+        // char *name = &files[i * header->max_file_size];
+        char *name = section_pointer + i * DIR_ENTRY_LEN;
         if (name[0]) {
             kwrite(name);
             kwrite("\n");
@@ -178,9 +185,37 @@ void f_list()
 }
 
 extern int main();
-void f_exec() {
-    /*
-     * TODO: ADD CODE TO EXECUTE HELLO.BIN 
-     *
-     */
+void f_exec()
+{
+    struct fs_header_t *header = get_fs_header();
+
+    /* Position at the begining of the directory region. */
+    unsigned int start_sector = header->number_of_boot_sectors + 1;
+    unsigned int n_sectors = header->number_of_file_entries * DIR_ENTRY_LEN / SECTOR_SIZE;
+
+    int memoryOffset = header->number_of_file_entries * 32 - (n_sectors - 1) * 512;
+
+    void *section_pointer = (void *)(start_sector * SECTOR_SIZE);
+
+    load_disk2(start_sector, n_sectors, section_pointer);
+
+    int bin_sector_coord = -1;
+    for (int i = 0; i < header->number_of_file_entries; i++) {
+        char *file_name = section_pointer + i * DIR_ENTRY_LEN;
+        if (!strcmp(file_name, "hello.bin")) {
+            bin_sector_coord = start_sector + n_sectors + header->max_file_size * i - 1;
+            break;
+        }
+    }
+    if (bin_sector_coord == -1) {
+        kwrite("Program not found.\n");
+        return;
+    }
+
+    void *program = (void *)(0xFE00);
+    void *program_sector_start = program - memoryOffset;
+
+    load_disk2(bin_sector_coord, header->max_file_size, program_sector_start);
+
+    exec();
 }

@@ -19,7 +19,7 @@
            by the bootloader (so as to respect the 512-byte length limit).*/
 	
 	.code16gcc
-	.global kread, udelay, register_syscall_handler, sys_write, load_disk
+	.global kread, udelay, register_syscall_handler, sys_write, load_disk, exec
 	
 	.section .text
 
@@ -139,43 +139,30 @@ msg_err_read:
 	
 	
 load_disk:
-    /* Save the caller-saved registers */
-    pushl %ebx
-    pushl %ecx
-    pushl %edx
-
-    /* Select the boot drive (from rt0.o) */
-    movb $0x00, %dl
-
-    /* BIOS disk service: op. read sector */
-    movb $0x02, %ah
-
-    /* How many sectors to read */
-    movb $0x01, %al
-
-    /* Cylinder coordinate (starts at 0) */
-    xorl %ecx, %ecx
-
-    /* Sector coordinate (starts at 1) */
-    incb %cl
-
-    /* Head coordinate (starts at 0) */
-    xorb %dh, %dh
-
-    /* Where to load the file system (rt0.o) */
-    movl $0x7C00, %ebx
-
-    /* Call BIOS disk service 0x13 */
-    int $0x13
-
-    /* Restore the caller-saved registers */
-    popl %edx
-    popl %ecx
-    popl %ebx
-
-    /* Return */
+    pusha                             # Save all general-purpose registers
+    mov %dl, boot_drive               # Select the boot drive (from rt0.o)
+    mov $0x2, %ah                     # BIOS disk service: op. read sector
+    mov %dl, %al                      # How many sectors to read (passed via ecx lower byte)
+    mov $0x0, %ch                     # Cylinder coordinate (starts at 0)
+    mov %cl, %cl                      # Sector coordinate (passed via edx lower byte)
+    mov $0x0, %dh                     # Head coordinate (starts at 0)
+    mov 6(%bp), %bx                     # Where to load the file system (passed via eax)
+    int $0x13                         # Call BIOS disk service 0x13
+    popa                              # Restore all general-purpose registers
     ret
 
+exec:
+	pusha 
+	pushl $exec_end	        /* Push return address. */
+	jmp 0xfe00		/* Jump to program. */
+exec_end:
+	popa
+	ret
+	
+	/* Read-only data. */
+	
+	.section .rodata
+	.align 4
 /* Notes.
 	
     (1) When coding in assembly for 16-bit, the directive .code16 instructs

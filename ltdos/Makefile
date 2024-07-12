@@ -27,8 +27,13 @@ dos = "ltdos"
 
 # Build the OS and an example user program.
 
-all: $(dos).bin prog.bin
+all: $(dos).bin $(progs).bin
 
+all_run:
+	$(MAKE) clean
+	$(MAKE)
+	$(MAKE) disk.img
+	$(MAKE) disk.img/run
 # Link all objects needed by the OS.
 
 $(dos).bin : bootloader.o bios1.o kernel.o kaux.o bios2.o logo.o syscall.o 
@@ -82,16 +87,10 @@ libtydos.o : tydos.h
 libtydos.a : libtydos.o
 	ar rcs $@ $^
 
-# Create a zeroed 1.44M floppy image, format it with tyFS, and copy sonnets into it
-disk.img:
-	rm -f $@
-	dd if=/dev/zero of=$@ count=2880
-
 tyfsedit:
 	$(MAKE) tyfs
 
-
-disk.img: hello.bin $(progs) $(dos).bin tyfsedit
+disk.img: $(progs) $(dos).bin tyfsedit
 	rm -f $@
 	# Create a zeroed 1.44M floppy image, format it with tyFS, and copy sonnets into it
 	dd if=/dev/zero of=$@ count=2880
@@ -100,11 +99,7 @@ disk.img: hello.bin $(progs) $(dos).bin tyfsedit
 	# Write the DOS program into disk.img without overwriting the tyFS header
 	dd bs=1 if=$(dos).bin of=disk.img skip=16 seek=16 conv=notrunc
 
-install-dos: $(dos).bin
-	dd bs=1 if=$< of=disk.img iseek=16 oseek=16 conv=notrunc
-
 # Housekeeping.
-
 .PHONY: clean
 
 clean:

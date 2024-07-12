@@ -41,4 +41,5 @@ void input (char *);
 void writexy(unsigned char, unsigned char, const char *);
 void clearxy(void);
 
+void uint_to_string(unsigned int num, char *str);
 #endif  /* KLIB_H  */

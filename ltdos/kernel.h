@@ -32,9 +32,7 @@ void shell();        /* Command interpreter. */
 /* Built-in commands. */
 
 void f_help();
-#if 0
 void f_exec();
-#endif
 void f_quit();
 void f_list();
 
