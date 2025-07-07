@@ -117,6 +117,7 @@ date:
     mov %dl, %al      /* Day is in DL */
     aam
     add $0x3030, %ax  /* ASCII Adjustment */
+	rol $8, %ax  /* Invert digit */
 
     mov %ax, date_buffer
     movb $'/', date_buffer + 2 /* Insert '/' character */
@@ -124,6 +125,7 @@ date:
     mov %dh, %al      /* Month is in DH */
     aam
     add $0x3030, %ax  /* ASCII Adjustment */
+	rol $8, %ax	 /* Invert digit */
 
     mov %ax, date_buffer + 3
     movb $'/', date_buffer + 5 /* Insert '/' character */
@@ -137,7 +139,7 @@ date:
     mov %ax, date_buffer + 6
     mov $date_buffer, %cx
 
-    call print
+    call println
     popa              /* Restore all GP registers. */
     ret
 
